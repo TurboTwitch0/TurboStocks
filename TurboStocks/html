@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NovaTrade — Learn. Analyze. Practice.</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- TradingView -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <a class="brand" href="#" onclick="showPage('home'); return false;">
+        <span class="brand-dot"></span>
+        NovaTrade
+    </a>
+
+    <div class="global-search">
+        <span>⌕</span>
+
+        <input
+            id="globalSearch"
+            placeholder="Search stocks, lessons, tools..."
+            oninput="globalSearch()"
+        >
+
+        <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <nav id="mainNav">
+
+        <button data-page="home">Home</button>
+        <button data-page="markets">Markets</button>
+        <button data-page="trending">Trending</button>
+        <button data-page="portfolio">Portfolio</button>
+        <button data-page="learn">Learn</button>
+        <button data-page="news">News</button>
+        <button data-page="ai">Nova AI</button>
+
+    </nav>
+
+    <button
+        class="icon-btn"
+        onclick="toggleTheme()"
+        title="Toggle theme"
+    >
+        ◐
+    </button>
+
+    <button
+        class="profile-btn"
+        onclick="openAuth()"
+        id="profileButton"
+    >
+        Sign in
+    </button>
+
+</header>
+
+
+<main>
+
+<!-- ======================================================
+     HOME
+====================================================== -->
+
+<section id="home-page" class="page active">
+
+    <div class="hero">
+
+        <div>
+
+            <span class="eyebrow">
+                THE SMARTER WAY TO LEARN MARKETS
+            </span>
+
+            <h1>
+                Learn markets.
+                <br>
+                <span>Think smarter.</span>
+                <br>
+                Practice safely.
+            </h1>
+
+            <p>
+                NovaTrade combines interactive charts,
+                financial education, market news,
+                paper trading, and an AI study partner
+                in one workspace.
+            </p>
+
+            <div class="hero-actions">
+
+                <button
+                    class="primary"
+                    onclick="showPage('learn')"
+                >
+                    Start Learning
+                </button>
+
+                <button
+                    class="secondary"
+                    onclick="showPage('markets')"
+                >
+                    Explore Markets
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div class="hero-card">
+
+            <div class="quote-mark">
+                “
+            </div>
+
+            <h3 id="dailyQuote">
+                The goal isn't to predict every move.
+                It's to build better decisions.
+            </h3>
+
+            <p>
+                Learn → Analyze → Practice → Review.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                WHY NOVATRADE
+            </span>
+
+            <h2>
+                Everything in one study cockpit.
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="feature-grid">
+
+        <article class="feature">
+            <b>01</b>
+            <h3>Understand</h3>
+            <p>
+                Learn the language of stocks,
+                charts, fundamentals and risk.
+            </p>
+        </article>
+
+        <article class="feature">
+            <b>02</b>
+            <h3>Analyze</h3>
+            <p>
+                Study interactive TradingView charts
+                and ask Nova to explain what you see.
+            </p>
+        </article>
+
+        <article class="feature">
+            <b>03</b>
+            <h3>Practice</h3>
+            <p>
+                Test ideas with simulated money
+                instead of real-money trading.
+            </p>
+        </article>
+
+        <article class="feature">
+            <b>04</b>
+            <h3>Review</h3>
+            <p>
+                Track lessons, quizzes, positions
+                and your paper-trading history.
+            </p>
+        </article>
+
+    </div>
+
+
+    <div class="dashboard-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Study progress
+                </h3>
+
+                <button onclick="showPage('learn')">
+                    Open Learn →
+                </button>
+
+            </div>
+
+            <div class="progress-wrap">
+
+                <div
+                    id="homeProgressBar"
+                    class="progress"
+                ></div>
+
+            </div>
+
+            <p id="homeProgressText">
+                0% complete
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Paper portfolio
+                </h3>
+
+                <button onclick="showPage('portfolio')">
+                    Open →
+                </button>
+
+            </div>
+
+            <div
+                class="big-number"
+                id="homePortfolio"
+            >
+                $100,000
+            </div>
+
+            <p>
+                Simulated account value
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Watchlist
+                </h3>
+
+                <button onclick="showPage('markets')">
+                    Markets →
+                </button>
+
+            </div>
+
+            <div id="homeWatchlist"></div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     MARKETS
+====================================================== -->
+
+<section id="markets-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                MARKETS
+            </span>
+
+            <h2>
+                Explore the market
+            </h2>
+
+            <p>
+                Interactive charts and market study tools.
+            </p>
+
+        </div>
+
+        <div class="inline-search">
+
+            <input
+                id="marketSearch"
+                placeholder="Search symbol..."
+                oninput="renderStocks()"
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="market-layout">
+
+        <div class="card chart-card">
+
+            <div class="chart-head">
+
+                <div>
+
+                    <strong id="chartSymbol">
+                        NASDAQ:AAPL
+                    </strong>
+
+                    <span id="chartHint">
+                        Advanced chart
+                    </span>
+
+                </div>
+
+                <button
+                    onclick="askAboutChart()"
+                >
+                    Ask Nova
+                </button>
+
+            </div>
+
+            <div
+                id="advancedChart"
+                class="tv-chart"
+            ></div>
+
+        </div>
+
+
+        <aside class="card stock-list-card">
+
+            <h3>
+                Symbols
+            </h3>
+
+            <div id="stockList"></div>
+
+        </aside>
+
+    </div>
+
+
+    <div class="widget-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Market Overview
+                </h3>
+
+                <button
+                    onclick="askNova(
+                        'Explain how to use a market overview widget for studying.'
+                    )"
+                >
+                    Q&A
+                </button>
+
+            </div>
+
+            <div
+                id="marketOverview"
+                class="tv-widget"
+            ></div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Market Summary
+                </h3>
+
+                <button
+                    onclick="askNova(
+                        'Teach me how to read gainers, losers and active stocks.'
+                    )"
+                >
+                    Q&A
+                </button>
+
+            </div>
+
+            <div
+                id="marketSummary"
+                class="tv-widget"
+            ></div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     TRENDING
+====================================================== -->
+
+<section id="trending-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                DISCOVERY
+            </span>
+
+            <h2>
+                Trending & study ideas
+            </h2>
+
+            <p>
+                Use market movement as a study prompt,
+                not as a guaranteed signal.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="widget-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Top movers
+                </h3>
+
+                <button
+                    onclick="askNova(
+                        'Explain how to study market movers without chasing price.'
+                    )"
+                >
+                    Q&A
+                </button>
+
+            </div>
+
+            <div
+                id="moversWidget"
+                class="tv-widget"
+            ></div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Economic calendar
+                </h3>
+
+                <button
+                    onclick="askNova(
+                        'Explain how economic events can affect stocks.'
+                    )"
+                >
+                    Q&A
+                </button>
+
+            </div>
+
+            <div
+                id="calendarWidget"
+                class="tv-widget"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="card-title">
+
+            <h3>
+                Trending symbols
+            </h3>
+
+            <button onclick="showPage('learn')">
+                Study →
+            </button>
+
+        </div>
+
+        <div
+            id="trendingList"
+            class="table-list"
+        ></div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     PORTFOLIO
+====================================================== -->
+
+<section id="portfolio-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                PAPER PORTFOLIO
+            </span>
+
+            <h2>
+                Your practice account
+            </h2>
+
+            <p>
+                Everything here uses simulated money.
+            </p>
+
+        </div>
+
+        <button
+            class="primary"
+            onclick="showPage('markets')"
+        >
+            Find a stock
+        </button>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat">
+            <span>Account value</span>
+            <strong id="portfolioValue">
+                $100,000
+            </strong>
+        </div>
+
+        <div class="stat">
+            <span>Buying power</span>
+            <strong id="buyingPower">
+                $100,000
+            </strong>
+        </div>
+
+        <div class="stat">
+            <span>Invested</span>
+            <strong id="investedValue">
+                $0
+            </strong>
+        </div>
+
+        <div class="stat">
+            <span>Positions</span>
+            <strong id="positionCount">
+                0
+            </strong>
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="card-title">
+
+            <h3>
+                Positions
+            </h3>
+
+            <button
+                onclick="askNova(
+                    'Help me understand diversification using my paper portfolio.'
+                )"
+            >
+                Ask Nova
+            </button>
+
+        </div>
+
+        <div id="positions"></div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>
+            Trade history
+        </h3>
+
+        <div id="tradeHistory"></div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     LEARN
+====================================================== -->
+
+<section id="learn-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                NOVA ACADEMY
+            </span>
+
+            <h2>
+                Learn, test, apply
+            </h2>
+
+            <p>
+                Build knowledge before making paper-trading decisions.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="learn-tabs">
+
+        <button
+            class="active"
+            onclick="filterLessons('all',this)"
+        >
+            All
+        </button>
+
+        <button
+            onclick="filterLessons('beginner',this)"
+        >
+            Beginner
+        </button>
+
+        <button
+            onclick="filterLessons('fundamentals',this)"
+        >
+            Fundamentals
+        </button>
+
+        <button
+            onclick="filterLessons('technical',this)"
+        >
+            Technical
+        </button>
+
+        <button
+            onclick="filterLessons('risk',this)"
+        >
+            Risk
+        </button>
+
+        <button
+            onclick="filterLessons('strategy',this)"
+        >
+            Strategy
+        </button>
+
+    </div>
+
+
+    <div class="learning-dashboard">
+
+        <div>
+
+            <span>
+                Progress
+            </span>
+
+            <strong id="learnProgressText">
+                0%
+            </strong>
+
+        </div>
+
+        <div class="progress-wrap">
+
+            <div
+                id="learnProgressBar"
+                class="progress"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <div
+        id="lessonList"
+        class="lesson-grid"
+    ></div>
+
+</section>
+
+
+<!-- ======================================================
+     NEWS
+====================================================== -->
+
+<section id="news-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                STUDY NEWS
+            </span>
+
+            <h2>
+                Market news & research
+            </h2>
+
+            <p>
+                Use current headlines as study material.
+            </p>
+
+        </div>
+
+        <button
+            class="secondary"
+            onclick="askNova(
+                'Turn current financial news into a study plan.'
+            )"
+        >
+            Make study plan
+        </button>
+
+    </div>
+
+
+    <div class="card news-widget-card">
+
+        <div class="card-title">
+
+            <h3>
+                Financial news
+            </h3>
+
+            <button
+                onclick="askNova(
+                    'How should I critically read financial news headlines?'
+                )"
+            >
+                Q&A
+            </button>
+
+        </div>
+
+        <div
+            id="newsWidget"
+            class="tv-widget news-height"
+        ></div>
+
+    </div>
+
+
+    <div class="article-grid">
+
+        <article class="study-card">
+
+            <span>
+                STUDY METHOD
+            </span>
+
+            <h3>
+                Headline → Claim → Evidence
+            </h3>
+
+            <p>
+                Identify the claim, then ask what evidence
+                supports it and what could contradict it.
+            </p>
+
+        </article>
+
+
+        <article class="study-card">
+
+            <span>
+                ADVANCED
+            </span>
+
+            <h3>
+                News → Sector → Company
+            </h3>
+
+            <p>
+                Study how an event could affect a sector
+                and then compare companies in that sector.
+            </p>
+
+        </article>
+
+
+        <article class="study-card">
+
+            <span>
+                AI LAB
+            </span>
+
+            <h3>
+                Turn news into questions
+            </h3>
+
+            <p>
+                Ask Nova to quiz you about an article
+                or explain unfamiliar terminology.
+            </p>
+
+        </article>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     AI
+====================================================== -->
+
+<section id="ai-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                NOVA AI
+            </span>
+
+            <h2>
+                Your market study partner
+            </h2>
+
+            <p>
+                Ask questions, analyze charts, compare companies,
+                or turn a topic into a lesson.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="ai-layout">
+
+        <div class="card ai-chat-card">
+
+            <div
+                id="chat"
+                class="chat"
+            >
+
+                <div class="assistant bubble">
+
+                    <b>
+                        Nova
+                    </b>
+
+                    <p>
+                        Hey! I can explain markets,
+                        analyze an uploaded chart,
+                        quiz you, compare companies,
+                        or help you review a paper trade.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="chat-input">
+
+                <textarea
+                    id="aiInput"
+                    placeholder="Ask Nova anything about markets..."
+                    onkeydown="aiEnter(event)"
+                ></textarea>
+
+                <button
+                    class="primary"
+                    onclick="sendAI()"
+                >
+                    Send
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <aside class="card ai-tools">
+
+            <h3>
+                Study tools
+            </h3>
+
+            <button
+                onclick="askNova(
+                    'Quiz me on stock market fundamentals. Ask one question at a time.'
+                )"
+            >
+                🧠 Quiz me
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Teach me how to analyze a stock from fundamentals to technical analysis.'
+                )"
+            >
+                🔬 Analyze a stock
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Explain P/E, EPS, revenue, margins and market cap.'
+                )"
+            >
+                📚 Fundamentals
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Teach me candlesticks, volume, RSI and MACD.'
+                )"
+            >
+                📈 Technical analysis
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Teach me risk management and diversification using paper trading.'
+                )"
+            >
+                🛡️ Risk lab
+            </button>
+
+
+            <label class="upload-btn">
+
+                📷 Analyze a chart/image
+
+                <input
+                    id="imageInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onchange="analyzeImage(this)"
+                >
+
+            </label>
+
+
+            <p class="small">
+
+                Nova can explain what is visible in a chart,
+                identify concepts and discuss bullish/bearish
+                scenarios. It does not execute trades or
+                guarantee investment outcomes.
+
+            </p>
+
+        </aside>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<!-- ======================================================
+     SIGN-IN MODAL
+====================================================== -->
+
+<div
+    id="authModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <button
+            class="close"
+            onclick="closeAuth()"
+        >
+            ×
+        </button>
+
+        <h2>
+            Save your NovaTrade progress
+        </h2>
+
+        <p>
+            Create a local study profile.
+            Lessons, watchlist and paper portfolio
+            can be saved on this browser.
+        </p>
+
+        <input
+            id="profileName"
+            placeholder="Your name"
+        >
+
+        <input
+            id="profileEmail"
+            type="email"
+            placeholder="Email"
+        >
+
+        <button
+            class="primary wide"
+            onclick="signInLocal()"
+        >
+            Continue
+        </button>
+
+        <p class="small">
+            This CodeHS version uses local browser storage,
+            not production authentication.
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- ======================================================
+     LESSON MODAL
+====================================================== -->
+
+<div
+    id="lessonModal"
+    class="modal"
+>
+
+    <div class="modal-box lesson-modal">
+
+        <button
+            class="close"
+            onclick="closeLesson()"
+        >
+            ×
+        </button>
+
+        <span
+            id="lessonCategory"
+            class="eyebrow"
+        ></span>
+
+        <h2 id="lessonTitle"></h2>
+
+        <div id="lessonBody"></div>
+
+        <div id="quizArea"></div>
+
+    </div>
+
+</div>
+
+
+<footer>
+
+    <strong>
+        NovaTrade
+    </strong>
+
+    <span>
+        Educational paper-trading platform • Not financial advice
+    </span>
+
+</footer>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
