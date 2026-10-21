@@ -1,0 +1,28 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  external_node_modules = ["express", "serverless-http", "rss-parser"]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/css"
+  to = "/styles.css"
+  status = 308
+
+[[redirects]]
+  from = "/style.css"
+  to = "/styles.css"
+  status = 308
+
+[[redirects]]
+  from = "/java"
+  to = "/app.js"
+  status = 308

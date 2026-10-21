@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Turbo Stocks — Learn. Analyze. Practice.</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+
+    <meta name="theme-color" content="#0b1222">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <!-- TradingView -->
+    <script id="thirdPartyCharts" async src="https://s3.tradingview.com/tv.js"></script>
+</head>
+
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<p id="connectionStatus" class="connection-status" role="status" hidden>Offline — cached lessons and fixed sample trading only. News and provider quotes need internet.</p>
+
+<p id="storageStatus" class="storage-status" role="alert" hidden>
+    Browser storage is unavailable. Progress and paper trades cannot be saved in this browser.
+</p>
+
+<header class="topbar">
+
+    <button type="button" class="brand-home" onclick="showPage('home')" aria-label="Turbo Stocks home">
+        <span class="brand-mark" aria-hidden="true">↗</span>
+        <span>Turbo <strong>Stocks</strong></span>
+    </button>
+
+    <div class="global-search">
+        <span>⌕</span>
+
+        <input
+            id="globalSearch" aria-label="Search stocks, lessons and tools"
+            placeholder="Search stocks, lessons, tools..."
+            oninput="globalSearch()"
+        >
+
+        <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <nav id="mainNav" aria-label="Main">
+
+        <button type="button" data-page="home">Home</button>
+        <button type="button" data-page="markets">Markets</button>
+        <button type="button" data-page="trending">Trending</button>
+        <button type="button" data-page="portfolio">Portfolio</button>
+        <button type="button" data-page="learn">Learn</button>
+        <button type="button" data-page="news">News</button>
+        <button type="button" data-page="ai">Tutor</button>
+        <button type="button" data-page="other">Other</button>
+
+    </nav>
+
+    <div class="topbar-actions">
+    <button
+        class="icon-btn"
+        onclick="toggleTheme()"
+        aria-label="Toggle light and dark theme"
+        aria-describedby="themeHelp"
+        data-tooltip="Switch between the light and dark color themes."
+    >
+        ◐
+    </button>
+    <span id="themeHelp" class="visually-hidden">Switch between light and dark color themes.</span>
+
+    <div class="profile-wrap">
+
+        <button
+            type="button"
+            class="profile-btn"
+            onclick="handleProfileClick()"
+            id="profileButton"
+        >
+            Sign in
+        </button>
+
+        <div
+            id="profileMenu"
+            class="profile-menu"
+            hidden
+        >
+
+            <div class="profile-menu-head">
+                <strong id="menuName">Student</strong>
+                <span id="menuEmail"></span>
+            </div>
+
+            <button type="button" onclick="showPage('portfolio'); closeProfileMenu();">
+                Paper portfolio
+            </button>
+
+            <button type="button" onclick="showPage('learn'); closeProfileMenu();">
+                My lessons
+            </button>
+
+            <button type="button" class="sign-out" onclick="signOut()">
+                Sign out
+            </button>
+
+        </div>
+
+    </div>
+
+    </div>
+
+</header>
+
+
+<main id="main-content" tabindex="-1">
+
+<!-- ======================================================
+     HOME
+====================================================== -->
+
+<section id="home-page" class="page active">
+
+    <div class="hero">
+
+        <div>
+
+            <span class="eyebrow">
+                THE SMARTER WAY TO LEARN MARKETS
+            </span>
+
+            <h1>
+                Learn markets.
+                <br>
+                <span>Think smarter.</span>
+                <br>
+                Practice safely.
+            </h1>
+
+            <p>
+                Turbo Stocks brings together interactive charts,
+                practical market lessons, news study tools,
+                paper trading, and a built-in study tutor.
+            </p>
+
+            <div class="hero-actions">
+
+                <button
+                    class="primary"
+                    onclick="showPage('learn')"
+                >
+                    Start Learning
+                </button>
+
+                <button
+                    class="secondary"
+                    onclick="showPage('markets')"
+                >
+                    Explore Markets
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div class="hero-card">
+
+            <div class="quote-mark">
+                “
+            </div>
+
+            <h3 id="dailyQuote">
+                The goal isn't to predict every move.
+                It's to build better decisions.
+            </h3>
+
+            <p>
+                Learn → Analyze → Practice → Review.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="home-overview" aria-label="Simulated portfolio overview">
+        <article class="stat"><span>Account value</span><strong id="homeAccountValue">$100,000</strong><small>Simulated</small></article>
+        <article class="stat"><span>Buying power</span><strong id="homeBuyingPower">$100,000</strong><small>Available cash</small></article>
+        <article class="stat"><span>Invested value</span><strong id="homeInvestedValue">$0</strong><small>Open positions</small></article>
+        <article class="stat"><span>Open positions</span><strong id="homeOpenPositions">0</strong><small>Paper holdings</small></article>
+    </div>
+
+
+    <div class="section-head home-section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                WHY TURBO STOCKS
+            </span>
+
+            <h2>
+                Everything in one study cockpit.
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="feature-grid">
+
+        <article class="feature">
+            <b>01</b>
+            <h3>Understand</h3>
+            <p>
+                Learn the language of stocks,
+                charts, fundamentals and risk.
+            </p>
+        </article>
+
+        <article class="feature">
+            <b>02</b>
+            <h3>Analyze</h3>
+            <p>
+                Study interactive charts and ask Turbo Tutor
+                to explain the indicators and concepts behind them.
+            </p>
+        </article>
+
+        <article class="feature">
+            <b>03</b>
+            <h3>Practice</h3>
+            <p>
+                Test ideas with simulated money
+                instead of real-money trading.
+            </p>
+        </article>
+
+        <article class="feature">
+            <b>04</b>
+            <h3>Review</h3>
+            <p>
+                Track lessons, quizzes, positions
+                and your paper-trading history.
+            </p>
+        </article>
+
+    </div>
+
+
+    <div class="dashboard-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Study progress
+                </h3>
+
+                <button onclick="showPage('learn')">
+                    Open Learn →
+                </button>
+
+            </div>
+
+            <div class="progress-wrap">
+
+                <div
+                    id="homeProgressBar"
+                    class="progress"
+                ></div>
+
+            </div>
+
+            <p id="homeProgressText">
+                0% complete
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Paper portfolio
+                </h3>
+
+                <button onclick="showPage('portfolio')">
+                    Open →
+                </button>
+
+            </div>
+
+            <div
+                class="big-number"
+                id="homePortfolio"
+            >
+                $100,000
+            </div>
+
+            <p>
+                Simulated account value
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Watchlist
+                </h3>
+
+                <button onclick="showPage('markets')">
+                    Markets →
+                </button>
+
+            </div>
+
+            <p class="small">Fixed educational sample prices · not current quotes</p>
+            <div class="watchlist-tools">
+                <label for="watchlistSort">Sort watchlist
+                    <select id="watchlistSort" onchange="renderWatchlist()">
+                        <option value="saved">Saved order</option>
+                        <option value="symbol">Symbol A–Z</option>
+                        <option value="price-desc">Sample price: high to low</option>
+                        <option value="change-desc">Sample change: high to low</option>
+                    </select>
+                </label>
+            </div>
+            <div id="homeWatchlist"></div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     MARKETS
+====================================================== -->
+
+<section id="markets-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                MARKETS
+            </span>
+
+            <h2>
+                Explore the market
+            </h2>
+
+            <p>
+                Interactive charts and market study tools.
+            </p>
+
+        </div>
+
+        <div class="inline-search">
+
+            <input
+                id="marketSearch"
+                placeholder="Search symbol..."
+                oninput="renderStocks()"
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="market-layout">
+
+        <div class="card chart-card">
+
+            <div class="chart-head">
+
+                <div>
+
+                    <strong id="chartSymbol">
+                        NASDAQ:AAPL
+                    </strong>
+
+                    <span id="chartHint">
+                        Advanced chart
+                    </span>
+
+                </div>
+
+                <button
+                    onclick="askAboutChart()"
+                >
+                    Ask tutor
+                </button>
+
+            </div>
+
+            <p class="chart-context-note">Chart follows the selected company above. TradingView supplies separate external chart data; paper orders use fixed educational sample prices. The chart cannot change the order symbol.</p>
+
+            <div
+                id="advancedChart"
+                class="tv-chart"
+                role="region"
+                aria-label="TradingView chart for the selected company"
+            ></div>
+            <div id="stockDetail" class="stock-detail" aria-live="polite"></div>
+
+        </div>
+
+
+        <aside class="card stock-list-card">
+
+            <h3>
+                Symbols
+            </h3>
+
+            <p class="small">Fixed sample prices; charts use separate provider data.</p><div id="stockList"></div>
+
+        </aside>
+
+    </div>
+
+
+    <div class="widget-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    Market Overview
+                </h3>
+
+                <button
+                    onclick="askNova(
+                        'Explain how to use a market overview widget for studying.'
+                    )"
+                >
+                    Q&A
+                </button>
+
+            </div>
+
+            <div
+                id="marketOverview"
+                class="tv-widget"
+            ></div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+
+                <h3>
+                    US Indices
+                </h3>
+
+                <button
+                    onclick="askNova(
+                        'Teach me how to compare broad US stock indexes and what each represents.'
+                    )"
+                >
+                    Q&A
+                </button>
+
+            </div>
+
+            <div
+                id="marketSummary"
+                class="tv-widget"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <div class="card heatmap-card">
+        <div class="card-title">
+            <div>
+                <h3>World stocks</h3>
+                <p>The embedded heatmap shows the widget’s all-US stock universe. TradingView’s separate global screener can scan 70+ markets across 50+ countries; available listings vary by exchange.</p>
+            </div>
+            <a class="primary button-link" href="https://www.tradingview.com/screener/" target="_blank" rel="noopener noreferrer">Browse global stocks ↗</a>
+        </div>
+        <div id="globalStockHeatmap" class="tv-widget stock-heatmap"></div>
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     TRENDING
+====================================================== -->
+
+<section id="trending-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                DISCOVERY
+            </span>
+
+            <h2>
+                Trending & study ideas
+            </h2>
+
+            <p>
+                Use market movement as a study prompt,
+                not as a guaranteed signal.
+            </p>
+
+            <p class="small">
+                Stock quotes and TradingView widgets reload every 60 seconds while this page is visible. Provider delays may apply.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="widget-grid trending-widgets">
+        <div class="card">
+            <div class="card-title">
+                <h3>Top movers</h3>
+                <button onclick="askNova('Explain how to study market movers without chasing price.')">Q&A</button>
+            </div>
+            <div id="moversWidget" class="tv-widget"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <h3>Economic calendar</h3>
+                <button onclick="askNova('Explain how economic events can affect stocks.')">Q&A</button>
+            </div>
+            <div id="calendarWidget" class="tv-widget"></div>
+        </div>
+
+
+
+        <section class="card mover-panel delta-panel" aria-labelledby="deltaMoversTitle">
+            <div class="card-title">
+                <div>
+                    <h3 id="deltaMoversTitle">Delta by eToro</h3>
+                    <p>Open Delta by eToro's official “What's Moving?” discovery feature.</p>
+                </div>
+            </div>
+            <a class="primary button-link" href="https://delta.app/en/features/discover" target="_blank" rel="noopener noreferrer">View Delta Discover ↗</a>
+            <p class="mover-status">Delta's movers are available inside its app; Delta does not provide a public feed for embedding live movers here.</p>
+        </section>
+    </div>
+
+    <div class="card heatmap-card">
+        <div class="card-title">
+            <div>
+                <h3>Browse the US stock market</h3>
+                <p>Explore a broad universe of US-listed stocks by sector and market cap.</p>
+            </div>
+            <a class="text-link" href="https://www.tradingview.com/heatmap/stock/" target="_blank" rel="noopener noreferrer">Open TradingView ↗</a>
+        </div>
+        <div id="stockHeatmap" class="tv-widget stock-heatmap"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <h3>Trending symbols</h3>
+            <button onclick="showPage('learn')">Study →</button>
+        </div>
+            <p id="trendingSymbolsStatus" class="mover-status" role="status" aria-live="polite">Loading provider quotes — delay may apply...</p>
+        <div id="trendingList" class="table-list"></div>
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     PORTFOLIO
+====================================================== -->
+
+<section id="portfolio-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                PAPER PORTFOLIO
+            </span>
+
+            <h2>
+                Your practice account
+            </h2>
+
+            <p>
+                Everything here uses simulated money.
+            </p>
+
+        </div>
+
+        <button
+            class="primary"
+            onclick="showPage('markets')"
+        >
+            Find a stock
+        </button>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat">
+            <span>Total portfolio value <button class="help-trigger" type="button" aria-label="Explain total portfolio value" aria-describedby="portfolioValueHelp" aria-expanded="false"><span aria-hidden="true">i</span><span id="portfolioValueHelp" class="help-content" role="tooltip">Available virtual cash plus holdings valued at this app’s fixed educational sample prices.</span></button></span>
+            <strong id="portfolioValue">
+                $100,000
+            </strong>
+        </div>
+
+        <div class="stat">
+            <span>Available virtual cash <button class="help-trigger" type="button" aria-label="Explain available virtual cash" aria-describedby="cashHelp" aria-expanded="false"><span aria-hidden="true">i</span><span id="cashHelp" class="help-content" role="tooltip">Cash currently available for simulated buy orders. This is not real money.</span></button></span>
+            <strong id="buyingPower">
+                $100,000
+            </strong>
+        </div>
+
+        <div class="stat">
+            <span>Holdings value · sample prices <button class="help-trigger" type="button" aria-label="Explain holdings value" aria-describedby="holdingValueHelp" aria-expanded="false"><span aria-hidden="true">i</span><span id="holdingValueHelp" class="help-content" role="tooltip">The shares you hold multiplied by fixed educational sample prices. These are not current market quotes.</span></button></span>
+            <strong id="investedValue">
+                $0
+            </strong>
+        </div>
+
+        <div class="stat">
+            <span>Positions</span>
+            <strong id="positionCount">
+                0
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="stats-grid portfolio-detail-stats">
+        <div class="stat"><span>Purchase cost basis <button class="help-trigger" type="button" aria-label="Explain cost basis" aria-describedby="costBasisHelp" aria-expanded="false"><span aria-hidden="true">i</span><span id="costBasisHelp" class="help-content" role="tooltip">The simulated purchase cost of shares still held, using the weighted average cost after buys.</span></button></span><strong id="holdingsCostBasis">$0</strong></div>
+        <div class="stat"><span>Realized P/L <button class="help-trigger" type="button" aria-label="Explain realized profit or loss" aria-describedby="realizedHelp" aria-expanded="false"><span aria-hidden="true">i</span><span id="realizedHelp" class="help-content" role="tooltip">Profit or loss recorded on shares already sold, compared with their average purchase cost.</span></button></span><strong id="realizedPnl">$0</strong></div>
+        <div class="stat"><span>Unrealized P/L <button class="help-trigger" type="button" aria-label="Explain unrealized profit or loss" aria-describedby="unrealizedHelp" aria-expanded="false"><span aria-hidden="true">i</span><span id="unrealizedHelp" class="help-content" role="tooltip">Holdings value minus their purchase cost basis. It changes only when your simulated position or sample price changes.</span></button></span><strong id="unrealizedPnl">$0</strong></div>
+    </div>
+
+    <div class="portfolio-overview">
+        <section class="card allocation-card" aria-labelledby="allocationTitle">
+            <div class="card-title"><h3 id="allocationTitle">Account allocation</h3><span class="small">Includes virtual cash</span></div>
+            <p class="small">Each slice shows a share of total simulated account value. The text list gives the same values and percentages.</p>
+            <div class="allocation-layout">
+                <div id="portfolioAllocation" class="allocation-chart" role="img" aria-label="Account allocation includes virtual cash"></div>
+                <ul id="allocationLegend" class="allocation-legend" aria-label="Allocation values"></ul>
+            </div>
+        </section>
+        <section class="card metric-explainer" aria-labelledby="metricExplainerTitle">
+            <h3 id="metricExplainerTitle">How to read these numbers</h3>
+            <p id="portfolioPerformance" class="small"></p>
+            <p class="small">Total return is not shown: this demo does not retain a complete starting-capital and cash-flow record to support a reliable denominator.</p>
+            <p class="small">All paper prices are fixed educational samples. No daily performance or live quote is used for these calculations.</p>
+        </section>
+    </div>
+
+
+    <div class="card paper-order-card">
+        <div class="card-title">
+            <h3>Practice order</h3>
+            <span class="small">Fixed sample prices · simulated money only</span>
+        </div>
+
+        <form id="paperOrderForm" class="paper-order-form">
+            <label for="orderSymbol">Symbol
+                <select id="orderSymbol" required></select>
+            </label>
+            <label for="orderSide">Action
+                <select id="orderSide">
+                    <option value="BUY">Buy</option>
+                    <option value="SELL">Sell</option>
+                </select>
+            </label>
+            <label for="orderShares">Shares
+                <input id="orderShares" type="number" min="0.000001" step="0.000001" value="1" required>
+            </label>
+            <button class="primary" type="submit">Review order</button>
+        </form>
+
+        <p id="orderStatus" class="small" role="status" aria-live="polite"></p>
+        <button class="secondary" type="button" onclick="resetPaperAccount()">Reset paper account</button>
+    </div>
+
+
+    <div class="card">
+
+        <div class="card-title">
+
+            <h3>
+                Holdings
+            </h3>
+
+            <button
+                onclick="askNova(
+                    'Help me understand diversification using my paper portfolio.'
+                )"
+            >
+                Ask tutor
+            </button>
+
+        </div>
+
+        <div id="positions"></div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>
+            Trade history
+        </h3>
+
+        <div class="history-tools">
+            <label for="historyFilter">Filter trades</label>
+            <input id="historyFilter" type="search" placeholder="Symbol or buy/sell" oninput="renderTradeHistory()">
+            <label for="historySideFilter">Action
+                <select id="historySideFilter" onchange="renderTradeHistory()">
+                    <option value="all">All trades</option>
+                    <option value="BUY">Buys</option>
+                    <option value="SELL">Sells</option>
+                </select>
+            </label>
+            <label for="historyFromFilter">From
+                <input id="historyFromFilter" type="date" onchange="renderTradeHistory()">
+            </label>
+            <label for="historyToFilter">Through
+                <input id="historyToFilter" type="date" onchange="renderTradeHistory()">
+            </label>
+            <button type="button" class="secondary" onclick="clearTradeHistoryFilters()">Clear filters</button>
+            <button type="button" onclick="exportTradeHistoryCsv()">Export matching trades CSV</button>
+        </div>
+        <p id="tradeHistorySummary" class="small" role="status" aria-live="polite"></p>
+        <p id="historyExportStatus" class="small" role="status" aria-live="polite"></p>
+        <div id="tradeHistory"></div>
+        <button type="button" onclick="exportLocalBackup()">Export browser backup</button>
+        <label class="backup-import" for="backupImportFile">Import browser backup
+            <input id="backupImportFile" type="file" accept="application/json,.json" onchange="importLocalBackup(this)">
+        </label>
+        <p id="backupStatus" class="small" role="status" aria-live="polite"></p>
+        <p class="small">Backup includes local demo profiles and progress. Keep it on your own device.</p>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     LEARN
+====================================================== -->
+
+<section id="learn-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                TURBO STOCKS ACADEMY
+            </span>
+
+            <h2>
+                Learn, test, apply
+            </h2>
+
+            <p>
+                Build knowledge before making paper-trading decisions.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="learning-tools">
+        <label class="lesson-search-label" for="lessonSearch">Search lessons</label>
+        <input id="lessonSearch" type="search" placeholder="Search a concept or topic" oninput="renderLessons()">
+    </div>
+
+    <section class="learning-paths card" aria-labelledby="learningPathsTitle">
+        <div class="card-title"><div><h3 id="learningPathsTitle">Learning paths</h3><p class="small">Follow a suggested order. Lessons remain available in every filter.</p></div><span id="recommendedNext" class="small" role="status"></span></div>
+        <div class="path-grid" id="learningPathGrid"></div>
+    </section>
+
+    <div class="learn-tabs" role="group" aria-label="Filter lessons by topic">
+
+        <button
+            class="active"
+            onclick="filterLessons('all',this)"
+        >
+            All
+        </button>
+
+        <button
+            onclick="filterLessons('beginner',this)"
+        >
+            Beginner
+        </button>
+
+        <button
+            onclick="filterLessons('fundamentals',this)"
+        >
+            Fundamentals
+        </button>
+
+        <button
+            onclick="filterLessons('technical',this)"
+        >
+            Technical
+        </button>
+
+        <button
+            onclick="filterLessons('risk',this)"
+        >
+            Risk
+        </button>
+
+        <button
+            onclick="filterLessons('strategy',this)"
+        >
+            Strategy
+        </button>
+
+    </div>
+
+
+    <div class="learning-dashboard">
+
+        <div>
+
+            <span>
+                Progress
+            </span>
+
+            <strong id="learnProgressText">
+                0%
+            </strong>
+
+        </div>
+
+        <div class="progress-wrap">
+
+            <div
+                id="learnProgressBar"
+                class="progress"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <div id="lessonList" class="lesson-grid"></div>
+
+</section>
+
+
+<!-- ======================================================
+     NEWS
+====================================================== -->
+
+<section id="news-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                STUDY NEWS
+            </span>
+
+            <h2>
+                Market news & research
+            </h2>
+
+            <p>
+                Use current headlines as study material.
+            </p>
+
+        </div>
+
+        <button
+            class="secondary"
+            onclick="askNova(
+                'Teach me to critically evaluate a financial news headline.'
+            )"
+        >
+            Headline study
+        </button>
+
+    </div>
+
+
+    <div class="card news-widget-card">
+
+        <div class="card-title">
+
+            <h3>
+                Financial news
+            </h3>
+
+            <button
+                onclick="askNova(
+                    'How should I critically read financial news headlines?'
+                )"
+            >
+                Q&A
+            </button>
+
+        </div>
+
+        <div
+            id="newsWidget"
+            class="tv-widget news-height"
+        ></div>
+
+    </div>
+
+
+    <div class="article-grid">
+
+        <article class="study-card">
+
+            <span>
+                STUDY METHOD
+            </span>
+
+            <h3>
+                Headline → Claim → Evidence
+            </h3>
+
+            <p>
+                Identify the claim, then ask what evidence
+                supports it and what could contradict it.
+            </p>
+
+        </article>
+
+
+        <article class="study-card">
+
+            <span>
+                ADVANCED
+            </span>
+
+            <h3>
+                News → Sector → Company
+            </h3>
+
+            <p>
+                Study how an event could affect a sector
+                and then compare companies in that sector.
+            </p>
+
+        </article>
+
+
+        <article class="study-card">
+
+            <span>
+                TUTOR LAB
+            </span>
+
+            <h3>
+                Turn news into questions
+            </h3>
+
+            <p>
+                Ask Turbo Tutor to quiz you about an article
+                or explain unfamiliar terminology.
+            </p>
+
+        </article>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     OTHER
+====================================================== -->
+
+<section id="other-page" class="page">
+
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">MORE TOOLS</span>
+            <h2>Other</h2>
+            <p>Study with a local AI, review community claims, or open Turbo Home.</p>
+        </div>
+    </div>
+
+    <section class="card device-preview-settings" aria-labelledby="devicePreviewTitle">
+        <h3 id="devicePreviewTitle">Page width preview</h3>
+        <p class="small">Preview common content widths. This does not resize your browser or change its responsive breakpoints.</p>
+        <div class="device-toolbar" role="toolbar" aria-label="Page width preview">
+            <span class="device-toolbar-label">Preview width</span>
+            <div class="device-options">
+                <button type="button" class="active" data-device="desktop" aria-pressed="true" onclick="setDevicePreview('desktop',this)">Desktop</button>
+                <button type="button" data-device="laptop" aria-pressed="false" onclick="setDevicePreview('laptop',this)">Laptop</button>
+                <button type="button" data-device="tablet" aria-pressed="false" onclick="setDevicePreview('tablet',this)">Tablet</button>
+                <button type="button" data-device="phone" aria-pressed="false" onclick="setDevicePreview('phone',this)">Phone</button>
+            </div>
+            <span id="previewSize" class="preview-size">Wide workspace</span>
+        </div>
+    </section>
+
+    <div class="other-grid">
+        <article class="other-tile">
+            <span class="lesson-category">PRIVATE · NO API KEY</span>
+            <h3>AI Tutor</h3>
+            <p>Ask the on-device Qwen tutor questions, practice with quizzes, or continue a prompt in ChatGPT.</p>
+            <button class="primary" onclick="showPage('ai')">Open AI Tutor</button>
+        </article>
+
+        <article class="other-tile">
+            <span class="lesson-category">PUBLIC SOURCES · UNVERIFIED</span>
+            <h3>Community Pulse</h3>
+            <p>Browse public discussion searches and keep a private log of claims to verify.</p>
+            <button class="primary" onclick="showPage('community')">Review community claims</button>
+        </article>
+
+        <article class="other-tile">
+            <span class="lesson-category">PROJECT HOME</span>
+            <h3>Turbo Home</h3>
+            <p>Open the Turbo Home resource site in a new tab.</p>
+            <a class="primary button-link" href="https://sites.google.com/stu.neisd.net/turbohome/home" target="_blank" rel="noopener noreferrer">Open Turbo Home ↗</a>
+            <button class="secondary" type="button" onclick="shareTurboStocks()">Share Turbo Stocks</button>
+            <p id="shareStatus" class="small" role="status" aria-live="polite"></p>
+        </article>
+
+        <article class="other-tile">
+            <span class="lesson-category">OWNERSHIP · SOURCES</span>
+            <h3>Copyright & sources</h3>
+            <p>Review attribution, project notices, and the downloadable source-integrity manifest.</p>
+            <button class="secondary" onclick="showPage('copyright')">Open Copyright</button>
+        </article>
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     COMMUNITY PULSE
+====================================================== -->
+
+<section id="community-page" class="page">
+
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">DISCUSSION RESEARCH</span>
+            <h2>Community Pulse</h2>
+            <p>Public posts are opinions, not evidence that a stock will rise. Verify claims independently.</p>
+        </div>
+    </div>
+
+    <div class="community-grid">
+        <div class="card">
+            <h3>Browse public discussion</h3>
+            <p class="small">Searches open on each service. Facebook and Robinhood may require sign-in; private posts are not collected here.</p>
+            <div class="community-search">
+                <label for="communitySymbol">Ticker</label>
+                <input id="communitySymbol" maxlength="8" value="AAPL" placeholder="e.g. AAPL">
+            </div>
+            <div class="community-actions">
+                <button class="secondary" onclick="searchCommunity('stocktwits')">Stocktwits ↗</button>
+                <button class="secondary" onclick="searchCommunity('reddit')">Reddit ↗</button>
+                <button class="secondary" onclick="searchCommunity('facebook')">Facebook public search ↗</button>
+                <button class="secondary" onclick="searchCommunity('robinhood')">Robinhood symbol page ↗</button>
+            </div>
+            <p id="communitySearchStatus" class="small" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="card">
+            <h3>Save a claim to review</h3>
+            <form id="communityNoteForm" class="community-form" onsubmit="saveCommunityNote(event)">
+                <label for="communityClaimSymbol">Ticker</label>
+                <input id="communityClaimSymbol" maxlength="8" placeholder="e.g. MSFT" required>
+                <label for="communitySource">Source</label>
+                <select id="communitySource">
+                    <option>Stocktwits</option>
+                    <option>Reddit</option>
+                    <option>Facebook</option>
+                    <option>Robinhood</option>
+                    <option>Other</option>
+                </select>
+                <label for="communityClaim">Claim or observation</label>
+                <textarea id="communityClaim" maxlength="600" rows="3" placeholder="What is being claimed? What evidence is linked?" required></textarea>
+                <label for="communityTone">Your reading</label>
+                <select id="communityTone">
+                    <option value="unverified">Unverified</option>
+                    <option value="bullish">Bullish opinion</option>
+                    <option value="mixed">Mixed / unclear</option>
+                    <option value="bearish">Bearish opinion</option>
+                </select>
+                <button class="primary" type="submit">Save private note</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card community-notes-card">
+        <div class="card-title">
+            <div>
+                <h3>Your saved observations</h3>
+                <p class="small">Stored in this browser only. Labels summarize your notes, not market sentiment or future returns.</p>
+            </div>
+            <div id="communitySummary" class="community-summary" aria-live="polite"></div>
+        </div>
+        <div id="communityNotes"></div>
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     AI
+====================================================== -->
+
+<section id="ai-page" class="page">
+
+    <div class="section-head">
+
+        <div>
+
+            <span class="eyebrow">
+                ON-DEVICE MARKET TUTOR
+            </span>
+
+            <h2>
+                Your market study partner
+            </h2>
+
+            <p>
+                The built-in study guide works without downloads. Optional Qwen AI generates text on this device after a model download. Current-news requests may show linked Google News excerpts; paper values use fixed educational samples.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="ai-layout">
+
+        <div class="card ai-chat-card">
+
+            <div
+                id="chat"
+                class="chat"
+            >
+
+                <div class="assistant bubble">
+
+                    <b>
+                        Turbo Tutor
+                    </b>
+
+                    <p>
+                        I’m Turbo Tutor. Ask about a market concept, or type “quiz me.” Answers are labelled as built-in guidance, local-model text, retrieved news, or calculated paper values.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="chat-input">
+
+                <textarea
+                    id="aiInput"
+                    placeholder="Ask about P/E, EPS, RSI, risk..."
+                    onkeydown="aiEnter(event)"
+                ></textarea>
+
+                <button
+                    class="primary"
+                    id="aiSend"
+                    onclick="sendAI()"
+                >
+                    Send
+                </button>
+                <button type="button" class="secondary" id="aiCancel" onclick="cancelAI()" hidden>Cancel</button>
+
+            </div>
+
+            <div class="image-study-tools">
+                <label class="upload-btn">
+                    Attach chart image
+                    <input id="tutorImageInput" type="file" accept="image/png,image/jpeg,image/webp" onchange="queueTutorImage(this)">
+                </label>
+                <button id="readChartImage" class="secondary" type="button" onclick="readTutorImage()" disabled>Read chart labels locally</button>
+                <span id="imageStudyStatus" class="small" role="status" aria-live="polite">OCR reads visible text only; it does not identify candle shapes.</span>
+                <img id="tutorImagePreview" alt="Selected chart image preview" hidden>
+            </div>
+
+        </div>
+
+
+        <aside class="card ai-tools">
+
+            <h3>
+                Study tools
+            </h3>
+
+            <div class="local-ai-panel">
+                <button type="button" class="primary wide" id="enableLocalAI" onclick="enableLocalAI()">
+                    Load free on-device AI
+                </button>
+                <p id="tutorStatus" class="small" role="status" aria-live="polite">
+                    Built-in tutor ready. Qwen on-device AI needs WebGPU, about 1 GB of GPU memory, and a one-time model download.
+                </p>
+                <label for="localModelChoice">On-device model</label>
+                <select id="localModelChoice"><option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Compact · lower memory use</option><option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Larger · higher memory use</option></select>
+                <p class="small">No API key or credits. First use needs a model download, WebGPU, HTTPS/localhost and sufficient GPU memory. Reload before changing a loaded model.</p>
+                <progress id="tutorProgress" max="100" value="0" hidden></progress>
+            </div>
+
+            <label class="remember-chat-option">
+                <input id="rememberTutorChat" type="checkbox">
+                Remember tutor chat on this browser
+            </label>
+
+            <button class="secondary" type="button" onclick="openInChatGPT()">Continue in ChatGPT ↗</button>
+            <p class="small">Opens ChatGPT separately and copies your draft prompt. Upload chart images there manually; nothing is sent automatically. ChatGPT sign-in and plan limits are separate.</p>
+            <p id="chatGPTStatus" class="small" role="status" aria-live="polite"></p>
+
+            <button
+                onclick="askNova(
+                    'Quiz me on stock market fundamentals. Ask one question at a time.'
+                )"
+            >
+                🧠 Quiz me
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Teach me how to analyze a stock from fundamentals to technical analysis.'
+                )"
+            >
+                🔬 Analysis checklist
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Explain P/E, EPS, revenue, margins and market cap.'
+                )"
+            >
+                📚 Fundamentals
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Teach me candlesticks, volume, RSI and MACD.'
+                )"
+            >
+                📈 Technical analysis
+            </button>
+
+            <button
+                onclick="askNova(
+                    'Teach me risk management and diversification using paper trading.'
+                )"
+            >
+                🛡️ Risk lab
+            </button>
+
+
+            <p class="small">
+                The model runs on your device after download. It has no live market feed and
+                is for education, not buy/sell recommendations.
+            </p>
+
+        </aside>
+
+    </div>
+
+</section>
+
+<section id="copyright-page" class="page">
+
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">OWNERSHIP · ATTRIBUTION · INTEGRITY</span>
+            <h2>Copyright & sources</h2>
+            <p>Project notice, third-party attributions, and a downloadable source-integrity snapshot.</p>
+        </div>
+    </div>
+
+    <div class="copyright-grid">
+        <article class="card copyright-notice">
+            <span class="lesson-category">PROJECT NOTICE</span>
+            <h3>Turbo Stocks</h3>
+            <p>© <span id="copyrightYear">2026</span> Turbo Stocks. Original app code, lesson text, and interface design are intended to remain with their respective authors.</p>
+            <p class="small">A copyright notice and file hash do not prove authorship, create a registration, or replace legal advice. Keep dated source history and original records for stronger provenance.</p>
+        </article>
+
+        <article class="card">
+            <span class="lesson-category">THIRD-PARTY MATERIAL</span>
+            <h3>Attributions</h3>
+            <ul class="attribution-list">
+                <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView</a> supplies embedded charts, market widgets, and their displayed market content. Their marks and data remain theirs; widget terms and attributions apply.</li>
+                <li><a href="https://webllm.mlc.ai/" target="_blank" rel="noopener noreferrer">WebLLM</a> runs the local model runtime; <a href="https://huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC" target="_blank" rel="noopener noreferrer">Qwen2.5 model files</a> are provided separately under their published terms.</li>
+                <li><a href="https://fonts.google.com/specimen/DM+Sans" target="_blank" rel="noopener noreferrer">DM Sans</a> and <a href="https://fonts.google.com/specimen/Space+Grotesk" target="_blank" rel="noopener noreferrer">Space Grotesk</a> are loaded from Google Fonts; font licenses remain with their authors.</li>
+                <li>News, discussion posts, logos, and other external materials remain the property of their publishers or owners.</li>
+            </ul>
+        </article>
+    </div>
+
+    <div class="card fingerprint-card">
+        <div class="card-title">
+            <div>
+                <h3>Source integrity snapshot</h3>
+                <p class="small">Calculates SHA-256 fingerprints for the served HTML, CSS, and JavaScript. This can show whether these files later changed; it is not legal proof of ownership.</p>
+            </div>
+            <button class="primary" type="button" onclick="generateCopyrightManifest()">Generate & download manifest</button>
+        </div>
+        <p id="copyrightManifestStatus" class="small" role="status" aria-live="polite">No manifest generated yet.</p>
+        <a id="copyrightManifestDownload" class="text-link" download="turbo-stocks-source-manifest.json" hidden>Download manifest JSON</a>
+        <div id="copyrightFingerprints" class="fingerprint-list"></div>
+    </div>
+
+</section>
+
+</main>
+<div id="mobileMoreMenu" class="mobile-more-menu" hidden aria-label="More pages">
+    <button type="button" data-page="trending" onclick="showPage('trending');toggleMobileMore(false)">Trending</button>
+    <button type="button" data-page="news" onclick="showPage('news');toggleMobileMore(false)">News</button>
+    <button type="button" data-page="ai" onclick="showPage('ai');toggleMobileMore(false)">Tutor</button>
+    <button type="button" data-page="community" onclick="showPage('community');toggleMobileMore(false)">Community Pulse</button>
+    <button type="button" data-page="other" onclick="showPage('other');toggleMobileMore(false)">Tools</button>
+    <button type="button" data-page="copyright" onclick="showPage('copyright');toggleMobileMore(false)">Copyright & sources</button>
+</div>
+<nav class="bottom-nav" aria-label="Mobile navigation">
+    <button type="button" data-page="home" onclick="showPage('home')">⌂<span>Home</span></button>
+    <button type="button" data-page="markets" onclick="showPage('markets')">⌕<span>Markets</span></button>
+    <button type="button" data-page="portfolio" onclick="showPage('portfolio')">▤<span>Portfolio</span></button>
+    <button type="button" data-page="learn" onclick="showPage('learn')">▱<span>Learn</span></button>
+    <button type="button" id="mobileMoreButton" aria-expanded="false" aria-controls="mobileMoreMenu" onclick="toggleMobileMore()">•••<span>More</span></button>
+</nav>
+
+
+<!-- ======================================================
+     SIGN-IN MODAL
+====================================================== -->
+
+<div
+    id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <button
+            type="button"
+            class="close"
+            onclick="closeAuth()"
+        >
+            ×
+        </button>
+
+        <div class="auth-tabs">
+            <button
+                type="button"
+                id="authTabSignIn"
+                class="active"
+                onclick="setAuthMode('signin')"
+            >
+                Sign in
+            </button>
+            <button
+                type="button"
+                id="authTabSignUp"
+                onclick="setAuthMode('signup')"
+            >
+                Create account
+            </button>
+        </div>
+
+        <h2 id="authTitle">
+            Welcome back
+        </h2>
+
+        <p id="authSubtitle">
+            Sign in to restore your lessons, watchlist,
+            and paper portfolio on this browser.
+        </p>
+
+        <p
+            id="authError" role="alert"
+            class="auth-error"
+            hidden
+        ></p>
+
+        <form id="localAuthForm">
+
+        <input
+            id="profileName" aria-label="Name"
+            placeholder="Your name"
+            autocomplete="name"
+            maxlength="80"
+            hidden
+        >
+
+        <input
+            id="profileEmail" aria-label="Email"
+            type="email"
+            placeholder="Email"
+            autocomplete="email"
+            required
+        >
+
+        <input
+            id="profilePassword" aria-label="Demo password"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+            minlength="6"
+            required
+        >
+
+        <input
+            id="profilePassword2" aria-label="Confirm demo password"
+            type="password"
+            placeholder="Confirm password"
+            autocomplete="new-password"
+            hidden
+        >
+
+        <button
+            type="submit"
+            class="primary wide"
+            id="authSubmit"
+        >
+            Sign in
+        </button>
+
+        </form>
+
+        <p class="small">
+            Demo profiles are saved in this browser only. They are not secure online accounts and do not sync. Use a unique demo password, never one from another service.
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- ======================================================
+     LESSON MODAL
+====================================================== -->
+
+<div
+    id="lessonModal" role="dialog" aria-modal="true" aria-labelledby="lessonTitle"
+    class="modal"
+>
+
+    <div class="modal-box lesson-modal">
+
+        <button
+            class="close"
+            onclick="closeLesson()"
+        >
+            ×
+        </button>
+
+        <span
+            id="lessonCategory"
+            class="eyebrow"
+        ></span>
+
+        <h2 id="lessonTitle"></h2>
+        <p id="lessonMeta" class="lesson-meta"></p>
+        <p id="lessonObjective" class="lesson-objective"></p>
+
+        <div id="lessonBody"></div>
+
+        <div id="quizArea"></div>
+
+    </div>
+
+</div>
+
+
+<footer>
+
+    <strong>
+        Turbo Stocks
+    </strong>
+
+    <span>
+        Educational paper-trading platform • Not financial advice
+    </span>
+
+</footer>
+
+
+<div class="mini-tutor">
+    <section id="miniTutorPanel" class="mini-tutor-panel" aria-label="Quick AI tutor" hidden>
+        <div class="mini-tutor-head">
+            <div>
+                <strong>Turbo Tutor</strong>
+                <span>On-device AI · no API key</span>
+            </div>
+            <button type="button" class="icon-btn" aria-label="Close quick tutor" onclick="toggleMiniTutor(false)">×</button>
+        </div>
+        <div id="miniTutorMessages" class="mini-tutor-messages" aria-live="polite"></div>
+        <form class="mini-tutor-form" onsubmit="submitMiniTutor(event)">
+            <textarea id="miniTutorInput" rows="2" maxlength="1200" placeholder="Ask a quick market question..."></textarea>
+            <div class="mini-tutor-actions">
+                <button type="submit" class="primary" id="miniTutorSend">Ask</button>
+                <button type="button" class="secondary" onclick="loadLocalAIFromMini()">Load local AI</button>
+                <button type="button" class="secondary" onclick="handoffMiniToChatGPT()">ChatGPT ↗</button>
+            </div>
+        </form>
+        <p id="miniTutorStatus" class="small">Educational only. The compact local model can make mistakes; verify financial facts. No live data or trade advice.</p>
+    </section>
+    <button id="miniTutorLauncher" class="mini-tutor-launcher" type="button" aria-expanded="false" aria-controls="miniTutorPanel" onclick="toggleMiniTutor()">Ask AI</button>
+</div>
+
+<script src="/paper-engine.js"></script>
+<script src="/app.js"></script>
+<script src="/ui.js"></script>
+
+</body>
+</html>

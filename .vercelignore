@@ -1,0 +1,6 @@
+TurboStocks-*.zip
+TurboStocks/
+.tool-cache/
+turbo-stocks-browser-backup*.json
+turbo-stocks-recovery-backup*.json
+turbo-stocks-trade-history*.csv

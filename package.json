@@ -1,0 +1,19 @@
+{
+  "name": "turbo-stocks",
+  "version": "1.5.4",
+  "private": true,
+  "main": "backend.js",
+  "scripts": {
+    "start": "node backend.js",
+    "check": "node --check backend.js && node --check index.js && node --check netlify/functions/api.js && node --check public/app.js && node --check public/paper-engine.js && node --check public/ui.js && node --check public/sw.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "rss-parser": "^3.13.0",
+    "serverless-http": "^3.2.0"
+  }
+}
