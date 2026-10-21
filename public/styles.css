@@ -298,7 +298,7 @@ main {
 
 .page.active {
     display: block;
-    animation: pageIn .28s ease;
+    animation: none;
 }
 
 @keyframes pageIn {
@@ -1736,7 +1736,7 @@ main { width:min(1440px,94%); padding-inline:0; }
 .profile-btn,.icon-btn,.secondary,.primary,button:not(.close) { border-radius:11px; }
 .primary,.secondary { min-height:44px; }
 button:hover:not(:disabled) { filter:brightness(1.08); }
-button:active:not(:disabled) { transform:translateY(1px); }
+button:active:not(:disabled) { transform:none; }
 button:disabled { cursor:not-allowed; opacity:.56; filter:saturate(.55); }
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
 .help-trigger:focus-visible { outline:3px solid var(--accent2); outline-offset:3px; }
@@ -2008,3 +2008,6 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 .search-results { z-index: 140; max-height: var(--search-height, min(55dvh, 440px)); overflow-y: auto; overscroll-behavior: contain; }
 .search-results .search-result { display: block; width: 100%; min-width: 0; min-height: 44px; margin: 0; text-align: left; white-space: normal; overflow-wrap: anywhere; color: var(--text); background: var(--panel); border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
 .search-results button:hover,.search-results button:focus-visible { background: var(--panel2); outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Reserve scrollbar space so switching between short and long tabs does not shift navigation. */
+html { scrollbar-gutter: stable; }

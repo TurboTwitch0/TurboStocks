@@ -953,7 +953,7 @@ function showPage(page) {
 
     window.scrollTo({
         top: 0,
-        behavior: "smooth"
+        behavior: "instant"
     });
 
 
@@ -4062,7 +4062,7 @@ document.addEventListener(
         const keyboardViewport=window.visualViewport;
         const syncKeyboardState=()=>document.body.classList.toggle("keyboard-open",!!keyboardViewport && window.innerHeight-keyboardViewport.height>140);
         keyboardViewport?.addEventListener("resize",syncKeyboardState);
-        document.addEventListener("focusin",event=>{if(event.target.matches("input,textarea,select")){window.setTimeout(()=>event.target.scrollIntoView({block:"nearest",behavior:"smooth"}),80);}});
+        // Let the browser handle focused fields; forced delayed scrolling fights sticky navigation.
         document.addEventListener("focusout",()=>window.setTimeout(syncKeyboardState,120));
 
 
