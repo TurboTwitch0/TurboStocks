@@ -3168,7 +3168,7 @@ function globalSearch() {
             results.map(
                 (result,index) => `
 
-                    <div
+                    <button type="button"
                         class="search-result"
                         onclick="runSearchResult(${index})"
                     >
@@ -3177,7 +3177,7 @@ function globalSearch() {
                             result.title
                         )}
 
-                    </div>
+                    </button>
                 `
             ).join("");
 
@@ -3193,6 +3193,7 @@ function globalSearch() {
 
     resultsBox.style.display =
         "block";
+    window.fitSearchResults?.();
 
 }
 

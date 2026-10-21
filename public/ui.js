@@ -392,3 +392,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("/sw.js").catch(() => console.warn("Offline application shell could not be registered."));
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("globalSearch");
+    const results = document.getElementById("searchResults");
+    const container = input?.closest(".global-search");
+    if (!container || !results) return;
+    const close = () => { results.style.display = "none"; };
+    window.fitSearchResults = () => {
+        const viewport = window.visualViewport;
+        const bottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+        const top = container.getBoundingClientRect().bottom + 4;
+        results.style.setProperty("--search-height", Math.max(0, Math.min(440, bottom - top - 12)) + "px");
+    };
+    window.addEventListener("resize", window.fitSearchResults);
+    window.addEventListener("scroll", window.fitSearchResults, { passive: true });
+    window.visualViewport?.addEventListener("resize", window.fitSearchResults);
+    window.visualViewport?.addEventListener("scroll", window.fitSearchResults);
+    input.addEventListener("focus", () => { if (input.value.trim()) globalSearch(); });
+    document.addEventListener("pointerdown", event => { if (!container.contains(event.target)) close(); });
+    container.addEventListener("focusout", event => { if (!container.contains(event.relatedTarget)) close(); });
+    container.addEventListener("keydown", event => {
+        if (event.key === "Escape") { input.focus(); close(); return; }
+        if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
+        event.preventDefault();
+        if (results.style.display !== "block") globalSearch();
+        const buttons = [...results.querySelectorAll("button")];
+        if (!buttons.length) return;
+        const index = buttons.indexOf(document.activeElement);
+        const next = event.key === "ArrowDown" ? (index + 1) % buttons.length : (index <= 0 ? buttons.length - 1 : index - 1);
+        buttons[next].focus();
+        buttons[next].scrollIntoView({ block: "nearest" });
+    });
+});

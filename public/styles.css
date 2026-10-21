@@ -89,7 +89,7 @@ button {
     line-height: 1.5;
 }
 
-.global-search span {
+.global-search > span {
     position: absolute;
     left: 13px;
     top: 9px;
@@ -121,7 +121,7 @@ textarea:focus {
 
 .search-results {
     position: absolute;
-    top: 48px;
+    top: calc(100% + 4px);
     left: 0;
     right: 0;
     display: none;
@@ -2001,3 +2001,10 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 .stock-detail-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
 
 
+
+/* Search stays within short viewports and the visible mobile keyboard area. */
+.global-search { min-width: 0; }
+.global-search input { font-size: 16px; min-width: 0; }
+.search-results { z-index: 140; max-height: var(--search-height, min(55dvh, 440px)); overflow-y: auto; overscroll-behavior: contain; }
+.search-results .search-result { display: block; width: 100%; min-width: 0; min-height: 44px; margin: 0; text-align: left; white-space: normal; overflow-wrap: anywhere; color: var(--text); background: var(--panel); border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+.search-results button:hover,.search-results button:focus-visible { background: var(--panel2); outline: 2px solid var(--accent); outline-offset: -2px; }

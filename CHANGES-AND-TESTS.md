@@ -4,6 +4,7 @@
 
 - Added root `index.js` importing Express and exporting the existing app so Vercel's Express integration detects it. Local `npm start` continues to run `backend.js`.
 - Added `vercel.json` with a 30-second maximum for the Express function. Vercel serves the existing `public/` frontend as static files; app API URLs and backend routes remain unchanged. Existing Netlify deployment files are retained.
+- Explicitly selects the Express framework in `vercel.json` so a saved static-site framework preset cannot disable the server deployment.
 - Expanded `.gitignore` for `.vercel/` and `.env.*`, documented GitHub-to-Vercel import/deploy steps and smoke checks, and recorded serverless cache/rate-limit and browser-local profile limitations.
 - Extended ignores for private backup/trade exports and applied the backend security headers to Vercel's static assets. The service-worker script has explicit revalidation headers.
 - Added `.vercelignore` to keep uploaded ZIP archives and the old `TurboStocks/` source folder out of the deployment while retaining them in Git history.
@@ -173,3 +174,10 @@ Passing coverage includes sign-in/sign-up/sign-out (including blocked-storage si
 The in-memory caches, request coalescing, and basic rate limit reset with a function instance and are not shared across Netlify instances. They are not a durable abuse-control service. Netlify functions and external news/quote providers are subject to their timeouts and availability. The quote source is an unofficial Yahoo integration and its commercial-use permission was not established. Google News RSS excerpts are untrusted and do not provide verified facts. TradingView has separate external data. Paper trades always use fixed sample prices. User accounts are browser-local demo profiles; secure backend authentication and synchronization are not implemented.
 
 
+
+## Search layout update — October 21, 2026
+- Results open directly below the search field, wrap long names, and scroll within available viewport height on every screen size.
+- Visual viewport resize/scroll handling accounts for mobile keyboard space; 16px input text avoids iPhone focus zoom.
+- Results use native buttons with arrow-key navigation, Escape dismissal, and outside-click/focus dismissal.
+- Updated service worker cache identifier.
+- Verification: syntax checks and all 58 existing automated tests passed. Rendered-browser verification was blocked by a local preview connection timeout; physical-device keyboard and orientation behavior remain untested.
