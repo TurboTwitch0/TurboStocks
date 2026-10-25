@@ -1668,6 +1668,114 @@ function loadNewsWidget(force = false) {
 }
 
 
+/* Show current provider data separately from the simulator's fixed sample prices. */
+async function openDailyBriefing() {
+    const modal = $("dailyBriefModal");
+    if (!modal) return;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    $("dailyBriefDate").textContent = new Date().toLocaleDateString(undefined, {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+    });
+    $("dailyBriefStatus").textContent = "Loading available headlines and quotes…";
+    $("dailyBriefSummary").textContent = "";
+    $("dailyBriefMovers").replaceChildren();
+    $("dailyBriefNews").replaceChildren();
+    const [quotesResult, newsResult] = await Promise.allSettled([
+        fetch("/api/trending-stocks", { cache: "no-store", signal: AbortSignal.timeout(15000) })
+            .then(response => { if (!response.ok) throw new Error("Quotes unavailable"); return response.json(); }),
+        fetch("/api/search?q=stock%20market", { cache: "no-store", signal: AbortSignal.timeout(12000) })
+            .then(response => { if (!response.ok) throw new Error("Headlines unavailable"); return response.json(); })
+    ]);
+    if (!modal.classList.contains("open")) return;
+    const sources = [];
+    const appendCard = (container, parts) => {
+        const card = document.createElement("article");
+        card.className = "daily-brief-item";
+        for (const part of parts) if (part) card.append(part);
+        container.append(card);
+    };
+    if (quotesResult.status === "fulfilled") {
+        const snapshot = quotesResult.value;
+        const quotes = (Array.isArray(snapshot.quotes) ? snapshot.quotes : [])
+            .filter(quote => Number.isFinite(Number(quote.change)))
+            .sort((first, second) => Number(second.change) - Number(first.change));
+        if (quotes.length) {
+            const gainers = quotes.filter(quote => quote.change > 0).length;
+            const losers = quotes.filter(quote => quote.change < 0).length;
+            $("dailyBriefSummary").textContent = "Among " + quotes.length + " tracked companies, " +
+                gainers + " rose and " + losers + " fell versus the previous close. This limited company sample is not a broad market index.";
+            const movers = $("dailyBriefMovers");
+            const selected = [...quotes.slice(0, 3), ...quotes.slice(-Math.min(3, quotes.length)).reverse()].slice(0, 6);
+            for (const quote of selected) {
+                const change = document.createElement("span");
+                change.className = "daily-brief-change " + (quote.change >= 0 ? "positive" : "negative");
+                change.textContent = (quote.change >= 0 ? "+" : "") + Number(quote.change).toFixed(2) + "%";
+                const name = document.createElement("strong");
+                name.textContent = quote.symbol + " · " + quote.name;
+                const detail = document.createElement("small");
+                detail.textContent = "Provider quote " +
+                    (quote.marketTime ? "as of " + new Date(quote.marketTime).toLocaleString() : "with no timestamp") +
+                    " · " + (snapshot.source || "market-data provider");
+                appendCard(movers, [change, name, detail]);
+            }
+            sources.push(snapshot.source || "Market data provider");
+        } else {
+            $("dailyBriefSummary").textContent = "No usable market quotes were returned.";
+            $("dailyBriefMovers").textContent = "Quotes unavailable.";
+        }
+    } else {
+        $("dailyBriefSummary").textContent = "The market snapshot is unavailable right now.";
+        $("dailyBriefMovers").textContent = "Try again later.";
+    }
+    if (newsResult.status === "fulfilled") {
+        const data = newsResult.value;
+        const articles = Array.isArray(data.articles) ? data.articles.slice(0, 5) : [];
+        const news = $("dailyBriefNews");
+        for (const article of articles) {
+            const title = document.createElement("strong");
+            title.textContent = article.title || "Untitled headline";
+            const detail = document.createElement("small");
+            detail.textContent = [
+                article.publishedAt ? new Date(article.publishedAt).toLocaleString() : "Publication time unavailable",
+                article.summary || ""
+            ].filter(Boolean).join(" · ");
+            let sourceLink = null;
+            try {
+                const url = new URL(article.link);
+                if (["https:", "http:"].includes(url.protocol)) {
+                    sourceLink = document.createElement("a");
+                    sourceLink.href = url.href;
+                    sourceLink.target = "_blank";
+                    sourceLink.rel = "noopener noreferrer";
+                    sourceLink.textContent = "Read source ↗";
+                }
+            } catch {}
+            appendCard(news, [title, detail, sourceLink]);
+        }
+        if (!articles.length) news.textContent = "No headlines were returned.";
+        sources.push(data.source || "News provider");
+    } else $("dailyBriefNews").textContent = "Headlines are unavailable. Try again later.";
+    $("dailyBriefSources").textContent = sources.length
+        ? "Sources: " + [...new Set(sources)].join(" · ") + ". Quotes may be delayed; this is not investment advice."
+        : "No providers responded. No current market facts are shown.";
+    $("dailyBriefStatus").textContent =
+        quotesResult.status === "fulfilled" || newsResult.status === "fulfilled"
+            ? "Latest provider information loaded." : "Market providers are temporarily unavailable.";
+    modal.querySelector(".close")?.focus();
+}
+
+function closeDailyBriefing() {
+    const modal = $("dailyBriefModal");
+    if (!modal) return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.querySelector('[onclick="openDailyBriefing()"]')?.focus();
+}
+window.openDailyBriefing = openDailyBriefing;
+window.closeDailyBriefing = closeDailyBriefing;
+
+
 /* =========================================================
    TRENDING
 ========================================================= */
@@ -4053,6 +4161,10 @@ document.addEventListener(
         });
 
         document.addEventListener("keydown", event => {
+            if (event.key === "Escape" && $("dailyBriefModal")?.classList.contains("open")) {
+                closeDailyBriefing();
+                return;
+            }
             if(event.key === "Escape" && !$("mobileMoreMenu")?.hidden) {
                 toggleMobileMore(false);
                 $("mobileMoreButton")?.focus();
@@ -4066,6 +4178,9 @@ document.addEventListener(
         document.addEventListener("focusout",()=>window.setTimeout(syncKeyboardState,120));
 
 
+        $("dailyBriefModal")?.addEventListener("click", event => {
+            if (event.target.id === "dailyBriefModal") closeDailyBriefing();
+        });
         $("authModal")?.addEventListener("click", (event) => {
             if (event.target.id === "authModal") closeAuth();
         });

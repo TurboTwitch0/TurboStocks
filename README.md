@@ -23,6 +23,8 @@ Do not open `public/index.html` by double-clicking it: the server is needed for 
 
 - The responsive layout now has a compact phone dashboard, four simulated-account metrics, a five-item bottom bar, and a “More” menu for Trending, News, Tutor, Community Pulse, and tools. The phone header keeps search, theme, and profile controls on separate, reachable rows. Tablet and desktop keep their wider layouts.
 
+- The home-page **Daily market update** opens on demand and shows recent news headlines with source links, a timestamped top-mover snapshot, and a limited-sample summary. External data can be delayed or unavailable and remains separate from the paper-trading sample prices.
+
 - Search company symbols and open a stock detail view. Sort the watchlist by saved order, symbol, sample price, or sample change. Stock details can prepare a paper order for review.
 - Place fractional paper orders after reviewing estimated cost/proceeds, buying power, and (for sales) realized P/L. Position prices are fixed samples; no fees, spreads, slippage, market hours, short selling, or real execution are modeled.
 - Review positions, cost basis, realized and unrealized P/L, and filter trade history by symbol, side, and date range. CSV export includes only matching trades and neutralizes spreadsheet formula cells.

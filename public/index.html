@@ -191,6 +191,12 @@
         <article class="stat"><span>Open positions</span><strong id="homeOpenPositions">0</strong><small>Paper holdings</small></article>
     </div>
 
+    <section class="daily-brief-card" aria-labelledby="dailyBriefHeading">
+        <div><span class="eyebrow">A QUICK MARKET CHECK</span><h2 id="dailyBriefHeading">Daily market update</h2>
+        <p>Review the latest available headlines and top movers. Market data may be delayed.</p></div>
+        <button type="button" class="primary" onclick="openDailyBriefing()">Open daily update</button>
+    </section>
+
 
     <div class="section-head home-section-head">
 
@@ -1468,6 +1474,25 @@
 
 </div>
 
+
+<!-- ======================================================
+     DAILY MARKET BRIEFING
+====================================================== -->
+<div id="dailyBriefModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dailyBriefTitle" aria-hidden="true">
+    <section class="modal-box daily-brief-modal">
+        <button type="button" class="close" aria-label="Close daily update" onclick="closeDailyBriefing()">×</button>
+        <span class="eyebrow">DAILY MARKET UPDATE</span>
+        <h2 id="dailyBriefTitle">Market news &amp; top movers</h2>
+        <p id="dailyBriefDate" class="small"></p>
+        <p id="dailyBriefStatus" role="status">Open the update to load available provider information.</p>
+        <h3>Market snapshot</h3><p id="dailyBriefSummary"></p>
+        <h3>Top movers</h3><div id="dailyBriefMovers" class="daily-brief-list"></div>
+        <h3>Recent headlines</h3><div id="dailyBriefNews" class="daily-brief-list"></div>
+        <p id="dailyBriefSources" class="small"></p>
+        <p class="small">Market data can be delayed or unavailable. Headlines are provider excerpts, not verified recommendations. Paper trading uses separate fixed sample prices.</p>
+        <button type="button" class="secondary" onclick="closeDailyBriefing()">Done</button>
+    </section>
+</div>
 
 <!-- ======================================================
      LESSON MODAL

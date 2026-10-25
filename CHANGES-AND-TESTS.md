@@ -1,5 +1,11 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Daily market briefing — October 25, 2026
+- Added an on-demand home-page market update card and dialog with provider headlines, tracked-company movers, and a plain-language snapshot.
+- Shows source names, quote times, provider errors, and the limited scope of tracked companies; renders provider text safely and keeps these data separate from fixed paper-trading prices.
+- Updated the service worker shell cache identifier.
+- Verification on October 25, 2026: `npm run check` passed; full `npm test` passed with **59 tests, 0 failures**, including the daily-briefing UI contract test.
+
 ## Changes
 
 - Added root `index.js` importing Express and exporting the existing app so Vercel's Express integration detects it. Local `npm start` continues to run `backend.js`.
