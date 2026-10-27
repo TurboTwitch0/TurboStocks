@@ -1,6 +1,6 @@
 {
   "name": "turbo-stocks",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "private": true,
   "main": "backend.js",
   "scripts": {
@@ -17,3 +17,4 @@
     "serverless-http": "^3.2.0"
   }
 }
+

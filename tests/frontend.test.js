@@ -3,7 +3,7 @@ test('home daily briefing is on demand, labels its source and separates live dat
     const html=fs.readFileSync('public/index.html','utf8'),app=fs.readFileSync('public/app.js','utf8'),css=fs.readFileSync('public/styles.css','utf8');
     assert.match(html,/onclick="openDailyBriefing\(\)"/);assert.match(html,/id="dailyBriefModal" class="modal" role="dialog" aria-modal="true"/);assert.match(html,/dampened 30-minute trend scenario/);
     assert.match(app,/fetch\("\/api\/trending-stocks"/);assert.match(app,/fetch\("\/api\/search\?q=stock%20market"/);
-    assert.match(app,/createTextNode|textContent = article\.title/);assert.match(app,/quote\.priceChange/);assert.match(app,/quote\.previousPrice/);assert.match(app,/estimate30m/);assert.match(app,/recent-volatility range/);assert.match(app,/formatQuoteMoney/);assert.match(app,/quotes may be delayed/i);assert.match(app,/fixed sample prices/i);
+    assert.match(app,/createTextNode|textContent = article\.title/);assert.match(app,/quote\.priceChange/);assert.match(app,/quote\.previousPrice/);assert.match(app,/estimate30m/);assert.match(app,/movePercent/);assert.match(app,/directionalAgreement/);assert.match(app,/recent-volatility range/);assert.match(app,/formatQuoteMoney/);assert.match(app,/quotes may be delayed/i);assert.match(app,/fixed sample prices/i);
     assert.match(app,/function closeDailyBriefing\(\)/);assert.match(css,/\.daily-brief-modal/);
 });
 async function signup(h,email='student@example.com') {
@@ -268,3 +268,4 @@ test('mobile navigation and home dashboard expose compact, accessible destinatio
     assert.match(app,/function toggleMobileMore\(force\)/);
     assert.match(app,/homeInvestedValue/);
 });
+

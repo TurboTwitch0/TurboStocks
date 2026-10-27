@@ -1,5 +1,11 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Release 1.5.5 — cautious mover estimate
+- Replaced one-window straight-line extrapolation with a heavily dampened blend of 5-, 15-, and 30-minute returns. The estimate shrinks further when windows disagree and caps the center move at half of recent 30-minute volatility.
+- Corrected volatility scaling to use elapsed minutes, and calculate the illustrative interval with compounded returns. The briefing now displays the estimated dollar and percentage move and percentage/dollar interval, plus simple time-window agreement.
+- This is a heuristic without historical backtesting. No accuracy improvement is claimed; provider freshness/coverage limits still apply. Paper trading remains separate fixed sample data.
+- Verification on October 26, 2026: `npm run check` passed; `npm test` passed with **61 tests, 0 failures**. Coverage includes positive and negative estimates, estimated percentage output, the recent-volatility range, and stale-quote fallback.
+
 ## Daily market briefing — October 25, 2026
 - Added an on-demand home-page market update card and dialog with provider headlines, tracked-company movers, and a plain-language snapshot.
 - Shows source names, quote times, provider errors, and the limited scope of tracked companies; renders provider text safely and keeps these data separate from fixed paper-trading prices.
@@ -194,3 +200,4 @@ The in-memory caches, request coalescing, and basic rate limit reset with a func
 - Results use native buttons with arrow-key navigation, Escape dismissal, and outside-click/focus dismissal.
 - Updated service worker cache identifier.
 - Verification: syntax checks and all 58 existing automated tests passed. Rendered-browser verification was blocked by a local preview connection timeout; physical-device keyboard and orientation behavior remain untested.
+

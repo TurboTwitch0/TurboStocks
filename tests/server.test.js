@@ -37,7 +37,7 @@ test('quotes coalesce concurrent loads and preserve provider time/source',async 
     let calls=0;const now=Math.floor(Date.now()/1000),timestamps=Array.from({length:31},(_,index)=>now-(30-index)*60),closes=Array.from({length:31},(_,index)=>119.7+index*.01);
     const base=await serve(t,{fetchImpl:async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,10));return Response.json({chart:{result:[{meta:{regularMarketPrice:120,chartPreviousClose:100,regularMarketTime:now,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}});}});
     const data=await Promise.all(Array.from({length:4},()=>fetch(base+'/api/trending-stocks').then(r=>r.json())));
-    assert.equal(calls,12);assert.equal(data[0].quotes.length,12);assert.equal(data[0].quotes[0].change,20);assert.equal(data[0].quotes[0].previousPrice,100);assert.equal(data[0].quotes[0].priceChange,20);assert.ok(data[0].quotes[0].marketTime);assert.equal(data[0].quotes[0].estimate30m.horizonMinutes,30);assert.ok(data[0].quotes[0].estimate30m.move>0);assert.ok(data[0].quotes[0].estimate30m.low<data[0].quotes[0].estimate30m.move);assert.ok(data[0].quotes[0].estimate30m.high>data[0].quotes[0].estimate30m.move);assert.match(data[0].source,/unofficial/);
+    assert.equal(calls,12);assert.equal(data[0].quotes.length,12);assert.equal(data[0].quotes[0].change,20);assert.equal(data[0].quotes[0].previousPrice,100);assert.equal(data[0].quotes[0].priceChange,20);assert.ok(data[0].quotes[0].marketTime);assert.equal(data[0].quotes[0].estimate30m.horizonMinutes,30);assert.ok(data[0].quotes[0].estimate30m.move>0);assert.ok(data[0].quotes[0].estimate30m.movePercent>0);assert.equal(data[0].quotes[0].estimate30m.directionalAgreement,3);assert.ok(data[0].quotes[0].estimate30m.low<data[0].quotes[0].estimate30m.move);assert.ok(data[0].quotes[0].estimate30m.high>data[0].quotes[0].estimate30m.move);assert.ok(data[0].quotes[0].estimate30m.lowPercent<data[0].quotes[0].estimate30m.movePercent);assert.ok(data[0].quotes[0].estimate30m.highPercent>data[0].quotes[0].estimate30m.movePercent);assert.match(data[0].source,/unofficial/);
     const cached=await(await fetch(base+'/api/trending-stocks')).json();assert.equal(cached.cached,true);assert.equal(calls,12);
 });
 test('quotes reject zero/negative/malformed prices and unavailable providers',async t=>{
@@ -52,7 +52,14 @@ test('stale quotes do not produce a fresh 30-minute trend scenario',async t=>{
     const base=await serve(t,{fetchImpl:async()=>Response.json({chart:{result:[{meta:{regularMarketPrice:103,chartPreviousClose:100,regularMarketTime:staleTime,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}})});
     const data=await(await fetch(base+'/api/trending-stocks')).json();assert.equal(data.quotes[0].estimate30m,null);assert.equal(data.quotes[0].priceChange,3);
 });
+test('30-minute trend scenario follows a decline and exposes the estimated percent move',async t=>{
+    const now=Math.floor(Date.now()/1000),timestamps=Array.from({length:31},(_,index)=>now-(30-index)*60),closes=Array.from({length:31},(_,index)=>120-index*.01);
+    const base=await serve(t,{fetchImpl:async()=>Response.json({chart:{result:[{meta:{regularMarketPrice:119.7,chartPreviousClose:120,regularMarketTime:now,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}})});
+    const data=await(await fetch(base+'/api/trending-stocks')).json(),estimate=data.quotes[0].estimate30m;
+    assert.ok(estimate.move<0);assert.ok(estimate.movePercent<0);assert.ok(estimate.low<estimate.move);assert.ok(estimate.high>estimate.move);assert.equal(estimate.directionalAgreement,3);
+});
 test('API rate limit supplies Retry-After while health stays available',async t=>{
     const base=await serve(t,{liveData:false});for(let i=0;i<40;i++)assert.equal((await fetch(base+'/api/missing')).status,404);
     const response=await fetch(base+'/api/missing');assert.equal(response.status,429);assert.equal(response.headers.get('retry-after'),'60');assert.equal((await fetch(base+'/health')).status,200);
 });
+

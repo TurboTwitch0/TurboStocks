@@ -1733,10 +1733,16 @@ async function openDailyBriefing() {
                     const scenarioSign = Number(estimate.move) >= 0 ? "+" : "−";
                     const lowSign = Number(estimate.low) >= 0 ? "+" : "−";
                     const highSign = Number(estimate.high) >= 0 ? "+" : "−";
-                    scenario.textContent = "Next 30 min trend scenario: " + scenarioSign + formatQuoteMoney(Math.abs(Number(estimate.move))) +
-                        " · recent-volatility range " + lowSign + formatQuoteMoney(Math.abs(Number(estimate.low))) +
+                    const expectedPercent = Number(estimate.movePercent);
+                    const lowPercent = Number(estimate.lowPercent);
+                    const highPercent = Number(estimate.highPercent);
+                    scenario.textContent = "Next 30 min scenario: " + scenarioSign + formatQuoteMoney(Math.abs(Number(estimate.move))) +
+                        (Number.isFinite(expectedPercent) ? " (" + (expectedPercent >= 0 ? "+" : "−") + Math.abs(expectedPercent).toFixed(2) + "%)" : "") +
+                        " · recent-volatility range (illustration) " + lowSign + formatQuoteMoney(Math.abs(Number(estimate.low))) +
+                        (Number.isFinite(lowPercent) ? " (" + (lowPercent >= 0 ? "+" : "−") + Math.abs(lowPercent).toFixed(2) + "%)" : "") +
                         " to " + highSign + formatQuoteMoney(Math.abs(Number(estimate.high))) +
-                        " · based on " + estimate.sampleBars + " recent bars";
+                        (Number.isFinite(highPercent) ? " (" + (highPercent >= 0 ? "+" : "−") + Math.abs(highPercent).toFixed(2) + "%)" : "") +
+                        " · " + (Number(estimate.directionalAgreement) || 0) + "/3 recent time windows agree · " + estimate.sampleBars + " bars";
                     scenario.className = "daily-brief-scenario";
                 } else {
                     scenario.textContent = "30-minute estimate unavailable; current intraday quote history is stale or too short.";
@@ -4418,3 +4424,4 @@ window.signOut =
 
 window.toggleTheme =
     toggleTheme;
+
