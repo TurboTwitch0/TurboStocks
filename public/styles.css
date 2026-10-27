@@ -2017,7 +2017,7 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 .daily-brief-item strong { display:block; }
 .daily-brief-item small { display:block; margin-top:5px; color:var(--muted); }
 .daily-brief-item a { display:inline-block; margin-top:6px; color:var(--accent2); }
-.daily-brief-change { float:right; font-variant-numeric:tabular-nums; }
+.daily-brief-change { display:block; margin:3px 0 7px; font-variant-numeric:tabular-nums; font-weight:700; }
 @media(max-width:760px) {
   .daily-brief-card { align-items:flex-start; flex-direction:column; }
   .daily-brief-card button { width:100%; min-height:44px; }

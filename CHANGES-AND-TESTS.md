@@ -6,6 +6,9 @@
 - Updated the service worker shell cache identifier.
 - Verification on October 25, 2026: `npm run check` passed; full `npm test` passed with **59 tests, 0 failures**, including the daily-briefing UI contract test.
 
+## Estimated top-mover amounts — October 26, 2026
+- The briefing now shows the provider-based dollar and percentage change since the previous close, plus the previous-close value and quote timestamp. This is an arithmetic estimate from provider data, not a forecast; simulator prices remain fixed samples.
+
 ## Changes
 
 - Added root `index.js` importing Express and exporting the existing app so Vercel's Express integration detects it. Local `npm start` continues to run `backend.js`.

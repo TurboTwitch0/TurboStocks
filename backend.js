@@ -85,7 +85,7 @@ function createApp({fetchImpl = globalThis.fetch, liveData = process.env.LIVE_DA
                 if(!Number.isFinite(change))return null;
                 const timestamp = Number(meta?.regularMarketTime);
                 const date = new Date(timestamp * 1000);
-                return {symbol,name,price,change,marketTime:Number.isFinite(timestamp) && !Number.isNaN(date.getTime()) ? date.toISOString() : '',currency:String(meta?.currency || 'Unknown')};
+                return {symbol,name,price,previousPrice:previous,priceChange:price-previous,change,marketTime:Number.isFinite(timestamp) && !Number.isNaN(date.getTime()) ? date.toISOString() : '',currency:String(meta?.currency || 'Unknown')};
             } catch {return null;}
         }));
         const quotes = results.filter(Boolean);

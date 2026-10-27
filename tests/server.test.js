@@ -36,7 +36,7 @@ test('unsafe article links are removed',async t=>{
 test('quotes coalesce concurrent loads and preserve provider time/source',async t=>{
     let calls=0;const base=await serve(t,{fetchImpl:async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,10));return Response.json({chart:{result:[{meta:{regularMarketPrice:120,chartPreviousClose:100,regularMarketTime:1791806400,currency:'USD'}}]}});}});
     const data=await Promise.all(Array.from({length:4},()=>fetch(base+'/api/trending-stocks').then(r=>r.json())));
-    assert.equal(calls,12);assert.equal(data[0].quotes.length,12);assert.equal(data[0].quotes[0].change,20);assert.ok(data[0].quotes[0].marketTime);assert.match(data[0].source,/unofficial/);
+    assert.equal(calls,12);assert.equal(data[0].quotes.length,12);assert.equal(data[0].quotes[0].change,20);assert.equal(data[0].quotes[0].previousPrice,100);assert.equal(data[0].quotes[0].priceChange,20);assert.ok(data[0].quotes[0].marketTime);assert.match(data[0].source,/unofficial/);
     const cached=await(await fetch(base+'/api/trending-stocks')).json();assert.equal(cached.cached,true);assert.equal(calls,12);
 });
 test('quotes reject zero/negative/malformed prices and unavailable providers',async t=>{

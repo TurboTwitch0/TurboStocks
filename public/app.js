@@ -1703,19 +1703,34 @@ async function openDailyBriefing() {
         if (quotes.length) {
             const gainers = quotes.filter(quote => quote.change > 0).length;
             const losers = quotes.filter(quote => quote.change < 0).length;
-            $("dailyBriefSummary").textContent = "Among " + quotes.length + " tracked companies, " +
-                gainers + " rose and " + losers + " fell versus the previous close. This limited company sample is not a broad market index.";
+            $("dailyBriefSummary").textContent = "Estimated change since the previous close: " + gainers +
+                " tracked companies are up and " + losers + " are down. This limited company sample is not a broad market index.";
             const movers = $("dailyBriefMovers");
             const selected = [...quotes.slice(0, 3), ...quotes.slice(-Math.min(3, quotes.length)).reverse()].slice(0, 6);
             for (const quote of selected) {
+                const formatQuoteMoney = amount => {
+                    try {
+                        return new Intl.NumberFormat(undefined, {
+                            style: "currency", currency: /^[A-Z]{3}$/.test(quote.currency || "") ? quote.currency : "USD"
+                        }).format(amount);
+                    } catch { return Number(amount).toFixed(2) + " " + (quote.currency || "currency units"); }
+                };
                 const change = document.createElement("span");
-                change.className = "daily-brief-change " + (quote.change >= 0 ? "positive" : "negative");
-                change.textContent = (quote.change >= 0 ? "+" : "") + Number(quote.change).toFixed(2) + "%";
+                const dollarChange = Number(quote.priceChange);
+                const percentChange = Number(quote.change);
+                change.className = "daily-brief-change " + (percentChange >= 0 ? "positive" : "negative");
+                let formattedChange = Number.isFinite(dollarChange)
+                    ? formatQuoteMoney(Math.abs(dollarChange))
+                    : "change unavailable";
+                change.textContent = Number.isFinite(dollarChange)
+                    ? (dollarChange >= 0 ? "+" : "−") + formattedChange + " (" + (percentChange >= 0 ? "+" : "") + percentChange.toFixed(2) + "%)"
+                    : (percentChange >= 0 ? "+" : "") + percentChange.toFixed(2) + "%";
                 const name = document.createElement("strong");
                 name.textContent = quote.symbol + " · " + quote.name;
                 const detail = document.createElement("small");
                 detail.textContent = "Provider quote " +
                     (quote.marketTime ? "as of " + new Date(quote.marketTime).toLocaleString() : "with no timestamp") +
+                    (Number.isFinite(Number(quote.previousPrice)) ? " · previous close " + formatQuoteMoney(Number(quote.previousPrice)) : "") +
                     " · " + (snapshot.source || "market-data provider");
                 appendCard(movers, [change, name, detail]);
             }
