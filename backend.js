@@ -6,6 +6,37 @@ const SYMBOLS = [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','NVIDIA'],['AMD',
 function safeHttpUrl(value) {
     try {const url = new URL(String(value || '')); return ['https:','http:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';} catch {return '';}
 }
+function estimateNext30Minutes(closes, timestamps, currentPrice) {
+    if (!Array.isArray(closes) || !Array.isArray(timestamps) || closes.length !== timestamps.length) return null;
+    const points = closes.map((close, index) => ({close:Number(close),time:Number(timestamps[index])}))
+        .filter(point => Number.isFinite(point.close) && point.close > 0 && Number.isFinite(point.time))
+        .slice(-40);
+    if (points.length < 15) return null;
+    const lastTime = points[points.length - 1].time;
+    const recent = points.filter(point => lastTime - point.time <= 30 * 60 && lastTime >= point.time);
+    if (recent.length < 15 || lastTime - recent[0].time < 14 * 60) return null;
+    const x = recent.map(point => (point.time - recent[0].time) / 60);
+    const y = recent.map(point => Math.log(point.close));
+    const meanX = x.reduce((sum,value)=>sum+value,0)/x.length;
+    const meanY = y.reduce((sum,value)=>sum+value,0)/y.length;
+    const denominator = x.reduce((sum,value)=>sum+(value-meanX)**2,0);
+    if (!denominator) return null;
+    const slope = x.reduce((sum,value,index)=>sum+(value-meanX)*(y[index]-meanY),0)/denominator;
+    const totalMinutes = x[x.length-1]-x[0];
+    const realizedVariance = recent.slice(1).reduce((sum,point,index)=>{
+        const previous=recent[index], minutes=(point.time-previous.time)/60;
+        const change=Math.log(point.close/previous.close);
+        return minutes>0 ? sum+change*change/minutes : sum;
+    },0)/Math.max(1,recent.length-1);
+    const volatilityPerMinute = Math.sqrt(Math.max(0,realizedVariance-slope*slope));
+    const horizon=30;
+    const rawScenarioReturn=slope*horizon*0.25; // Damp the recent trend to limit straight-line extrapolation.
+    const scenarioReturn=rawScenarioReturn;
+    const move=Number(currentPrice)*Math.expm1(scenarioReturn);
+    const range=Number(currentPrice)*volatilityPerMinute*Math.sqrt(horizon)*1.96;
+    if (![move,range,totalMinutes].every(Number.isFinite)) return null;
+    return {horizonMinutes:horizon,move,low:move-range,high:move+range,sampleBars:recent.length,observedMinutes:totalMinutes};
+}
 async function readLimited(response, limit = 1024 * 1024) {
     const reader = response.body?.getReader();
     if (!reader) throw new Error('Provider response has no body.');
@@ -85,7 +116,10 @@ function createApp({fetchImpl = globalThis.fetch, liveData = process.env.LIVE_DA
                 if(!Number.isFinite(change))return null;
                 const timestamp = Number(meta?.regularMarketTime);
                 const date = new Date(timestamp * 1000);
-                return {symbol,name,price,previousPrice:previous,priceChange:price-previous,change,marketTime:Number.isFinite(timestamp) && !Number.isNaN(date.getTime()) ? date.toISOString() : '',currency:String(meta?.currency || 'Unknown')};
+                const series=payload.chart?.result?.[0], closes=series?.indicators?.quote?.[0]?.close;
+                const quoteIsFresh=Number.isFinite(timestamp) && Math.abs(Date.now()/1000-timestamp)<=300;
+                const estimate=quoteIsFresh ? estimateNext30Minutes(closes,series?.timestamp,price) : null;
+                return {symbol,name,price,previousPrice:previous,priceChange:price-previous,change,estimate30m:estimate,marketTime:Number.isFinite(timestamp) && !Number.isNaN(date.getTime()) ? date.toISOString() : '',currency:String(meta?.currency || 'Unknown')};
             } catch {return null;}
         }));
         const quotes = results.filter(Boolean);

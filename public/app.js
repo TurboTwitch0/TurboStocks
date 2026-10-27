@@ -1727,12 +1727,27 @@ async function openDailyBriefing() {
                     : (percentChange >= 0 ? "+" : "") + percentChange.toFixed(2) + "%";
                 const name = document.createElement("strong");
                 name.textContent = quote.symbol + " · " + quote.name;
+                const scenario = document.createElement("small");
+                const estimate = quote.estimate30m;
+                if (estimate && Number.isFinite(Number(estimate.move)) && Number.isFinite(Number(estimate.low)) && Number.isFinite(Number(estimate.high))) {
+                    const scenarioSign = Number(estimate.move) >= 0 ? "+" : "−";
+                    const lowSign = Number(estimate.low) >= 0 ? "+" : "−";
+                    const highSign = Number(estimate.high) >= 0 ? "+" : "−";
+                    scenario.textContent = "Next 30 min trend scenario: " + scenarioSign + formatQuoteMoney(Math.abs(Number(estimate.move))) +
+                        " · recent-volatility range " + lowSign + formatQuoteMoney(Math.abs(Number(estimate.low))) +
+                        " to " + highSign + formatQuoteMoney(Math.abs(Number(estimate.high))) +
+                        " · based on " + estimate.sampleBars + " recent bars";
+                    scenario.className = "daily-brief-scenario";
+                } else {
+                    scenario.textContent = "30-minute estimate unavailable; current intraday quote history is stale or too short.";
+                    scenario.className = "daily-brief-scenario muted";
+                }
                 const detail = document.createElement("small");
                 detail.textContent = "Provider quote " +
                     (quote.marketTime ? "as of " + new Date(quote.marketTime).toLocaleString() : "with no timestamp") +
                     (Number.isFinite(Number(quote.previousPrice)) ? " · previous close " + formatQuoteMoney(Number(quote.previousPrice)) : "") +
                     " · " + (snapshot.source || "market-data provider");
-                appendCard(movers, [change, name, detail]);
+                appendCard(movers, [change, name, scenario, detail]);
             }
             sources.push(snapshot.source || "Market data provider");
         } else {

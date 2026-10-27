@@ -2016,6 +2016,8 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 .daily-brief-item { min-width:0; padding:11px 13px; border:1px solid var(--border); border-radius:12px; background:var(--panel2); overflow-wrap:anywhere; }
 .daily-brief-item strong { display:block; }
 .daily-brief-item small { display:block; margin-top:5px; color:var(--muted); }
+.daily-brief-item .daily-brief-scenario { color:var(--accent2); line-height:1.5; }
+.daily-brief-item .daily-brief-scenario.muted { color:var(--muted); }
 .daily-brief-item a { display:inline-block; margin-top:6px; color:var(--accent2); }
 .daily-brief-change { display:block; margin:3px 0 7px; font-variant-numeric:tabular-nums; font-weight:700; }
 @media(max-width:760px) {

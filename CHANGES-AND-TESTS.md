@@ -9,6 +9,10 @@
 ## Estimated top-mover amounts — October 26, 2026
 - The briefing now shows the provider-based dollar and percentage change since the previous close, plus the previous-close value and quote timestamp. This is an arithmetic estimate from provider data, not a forecast; simulator prices remain fixed samples.
 
+## 30-minute directional scenario — October 26, 2026
+- When quote history is fresh and has enough one-minute bars, the briefing adds a dampened continuation scenario and a recent-volatility range for the next 30 minutes. Outside fresh intraday quote conditions it says the estimate is unavailable. This heuristic has not been backtested and is not evidence of improved forecasting accuracy.
+- Verification on October 26, 2026: `npm run check` passed; `npm test` passed with **60 tests, 0 failures**, including a fresh-quote estimate and stale-quote fallback check.
+
 ## Changes
 
 - Added root `index.js` importing Express and exporting the existing app so Vercel's Express integration detects it. Local `npm start` continues to run `backend.js`.

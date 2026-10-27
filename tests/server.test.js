@@ -34,9 +34,10 @@ test('unsafe article links are removed',async t=>{
     const data=await (await fetch(base+'/api/search?q=links')).json();assert.equal(data.articles[0].link,'');
 });
 test('quotes coalesce concurrent loads and preserve provider time/source',async t=>{
-    let calls=0;const base=await serve(t,{fetchImpl:async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,10));return Response.json({chart:{result:[{meta:{regularMarketPrice:120,chartPreviousClose:100,regularMarketTime:1791806400,currency:'USD'}}]}});}});
+    let calls=0;const now=Math.floor(Date.now()/1000),timestamps=Array.from({length:31},(_,index)=>now-(30-index)*60),closes=Array.from({length:31},(_,index)=>119.7+index*.01);
+    const base=await serve(t,{fetchImpl:async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,10));return Response.json({chart:{result:[{meta:{regularMarketPrice:120,chartPreviousClose:100,regularMarketTime:now,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}});}});
     const data=await Promise.all(Array.from({length:4},()=>fetch(base+'/api/trending-stocks').then(r=>r.json())));
-    assert.equal(calls,12);assert.equal(data[0].quotes.length,12);assert.equal(data[0].quotes[0].change,20);assert.equal(data[0].quotes[0].previousPrice,100);assert.equal(data[0].quotes[0].priceChange,20);assert.ok(data[0].quotes[0].marketTime);assert.match(data[0].source,/unofficial/);
+    assert.equal(calls,12);assert.equal(data[0].quotes.length,12);assert.equal(data[0].quotes[0].change,20);assert.equal(data[0].quotes[0].previousPrice,100);assert.equal(data[0].quotes[0].priceChange,20);assert.ok(data[0].quotes[0].marketTime);assert.equal(data[0].quotes[0].estimate30m.horizonMinutes,30);assert.ok(data[0].quotes[0].estimate30m.move>0);assert.ok(data[0].quotes[0].estimate30m.low<data[0].quotes[0].estimate30m.move);assert.ok(data[0].quotes[0].estimate30m.high>data[0].quotes[0].estimate30m.move);assert.match(data[0].source,/unofficial/);
     const cached=await(await fetch(base+'/api/trending-stocks')).json();assert.equal(cached.cached,true);assert.equal(calls,12);
 });
 test('quotes reject zero/negative/malformed prices and unavailable providers',async t=>{
@@ -45,6 +46,11 @@ test('quotes reject zero/negative/malformed prices and unavailable providers',as
         assert.equal((await fetch(base+'/api/trending-stocks')).status,502);
     }
     const base=await serve(t,{fetchImpl:async()=>{throw new Error('Timeout');}});assert.equal((await fetch(base+'/api/trending-stocks')).status,502);
+});
+test('stale quotes do not produce a fresh 30-minute trend scenario',async t=>{
+    const staleTime=Math.floor(Date.now()/1000)-3600,timestamps=Array.from({length:31},(_,index)=>staleTime-(30-index)*60),closes=Array.from({length:31},(_,index)=>100+index*.1);
+    const base=await serve(t,{fetchImpl:async()=>Response.json({chart:{result:[{meta:{regularMarketPrice:103,chartPreviousClose:100,regularMarketTime:staleTime,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}})});
+    const data=await(await fetch(base+'/api/trending-stocks')).json();assert.equal(data.quotes[0].estimate30m,null);assert.equal(data.quotes[0].priceChange,3);
 });
 test('API rate limit supplies Retry-After while health stays available',async t=>{
     const base=await serve(t,{liveData:false});for(let i=0;i<40;i++)assert.equal((await fetch(base+'/api/missing')).status,404);
