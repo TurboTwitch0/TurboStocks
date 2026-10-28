@@ -5,7 +5,7 @@ const fs = require('node:fs');
 test('service worker caches shell only, bypasses APIs and external requests',async () => {
  const handlers={},added=[],put=[];
  const context=vm.createContext({URL,Promise,self:{location:{origin:'https://turbo.test'},addEventListener:(name,handler)=>handlers[name]=handler},
- caches:{open:async()=>({addAll:async files=>added.push(...files),put:async request=>put.push(request.url)}),keys:async()=>[],match:async()=>({offline:true})},fetch:async()=>({ok:true,clone(){return {};}})});
+ caches:{open:async()=>({addAll:async files=>added.push(...files),put:async request=>put.push(request.url),match:async()=>({offline:true})}),keys:async()=>[]},fetch:async()=>({ok:true,clone(){return {};}})});
  vm.runInContext(fs.readFileSync('public/sw.js','utf8'),context);
  let pending;handlers.install({waitUntil:promise=>pending=promise});await pending;
  assert.ok(added.includes('/'));assert.ok(added.includes('/icons/turbo-mark.svg'));assert.ok(!added.some(path=>path.startsWith('/api')));
@@ -15,6 +15,19 @@ test('service worker caches shell only, bypasses APIs and external requests',asy
  let response;handlers.fetch({request:{method:'GET',url:'https://turbo.test/styles.css'},respondWith:p=>response=p,waitUntil:p=>pending=p});await response;await pending;assert.equal(put.length,1);
  context.fetch=async()=>{throw new Error('Offline');};
  handlers.fetch({request:{method:'GET',url:'https://turbo.test/'},respondWith:p=>response=p});assert.equal((await response).offline,true);
+});
+test('offline shell requests with query parameters use the current release cache and canonical path', async () => {
+ const handlers={},lookups=[],opened=[];
+ const context=vm.createContext({URL,Promise,self:{location:{origin:'https://turbo.test'},addEventListener:(name,handler)=>handlers[name]=handler},
+  caches:{open:async name=>{opened.push(name);return {match:async path=>{lookups.push(path);return {offline:true};}};}},
+  fetch:async()=>{throw new Error('Offline');}});
+ vm.runInContext(fs.readFileSync('public/sw.js','utf8'),context);
+ for(const path of ['/?view=portfolio','/app.js?v=next','/styles.css?theme=dark']) {
+  let response;handlers.fetch({request:{method:'GET',url:'https://turbo.test'+path},respondWith:p=>response=p});
+  assert.equal((await response).offline,true);
+ }
+ assert.deepEqual(lookups,['/','/app.js','/styles.css']);
+ assert.ok(opened.every(name=>name==='turbo-shell-v1.6.1-offline-query'));
 });
 test('manifest icons are actual PNG files with declared sizes', () => {
  const manifest=JSON.parse(fs.readFileSync('public/manifest.webmanifest','utf8'));
