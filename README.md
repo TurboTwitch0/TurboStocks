@@ -15,7 +15,7 @@ Turbo Stocks is a financial education and paper-trading application. Paper trade
    npm start
    ```
 
-4. Open `http://localhost:3000` in a browser. The local preview may use a different port if one is already occupied; use the URL printed in the terminal. Stop the server with **Ctrl+C** in the terminal.
+4. Open `http://localhost:3000` in a browser. To use another port in PowerShell, run `$env:PORT='3100'` before `npm start`, then open `http://localhost:3100`. The server prints its configured URL in the terminal. Stop it with **Ctrl+C**.
 
 Do not open `public/index.html` by double-clicking it: the server is needed for API requests, Web Crypto, and service-worker registration. `npm ci` installs the dependencies listed in the lockfile. The ZIP intentionally does not contain `node_modules` or secrets.
 
@@ -88,6 +88,5 @@ The Express adapter uses `serverless-http`. Netlify synchronous functions have a
 | 3 | Company comparisons using sourced, comparable information | Permitted data source, aligned reporting periods/currencies, citations and update dates | High | Attribution and source quality need review; likely recurring data/API cost |
 | 4 | Secure backend accounts and cross-device synchronization | Identity provider, database, migrations, recovery, privacy and deployment design | High | Requires authorization, secure sessions, encryption, retention and incident response; recurring infrastructure costs |
 | 5 | Documented, permitted market/news sources | Provider due diligence, source labels, attribution, limits and monitoring | Medium–High | License and commercial-use review; recurring provider or usage costs may apply |
-
 
 
