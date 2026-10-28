@@ -5,7 +5,7 @@ Turbo Stocks is a financial education and paper-trading application. Paper trade
 ## Run in VS Code
 
 1. Install [Node.js 20 or later](https://nodejs.org/) and [Visual Studio Code](https://code.visualstudio.com/).
-2. Extract the ZIP and open the `TurboStocks` folder in VS Code with **File → Open Folder**.
+2. Get the source from the GitHub repository (**Code → Download ZIP**) or use the complete project ZIP. Extract it, then use **File → Open Folder** to open the project root: the folder containing `package.json`, `backend.js`, and `public/`. In this repository that is the repository root; do not open the archived legacy source folder.
 3. Choose **Terminal → New Terminal** and run:
 
    ```sh
@@ -15,7 +15,7 @@ Turbo Stocks is a financial education and paper-trading application. Paper trade
    npm start
    ```
 
-4. Open `http://localhost:3000` in a browser. Stop the server with **Ctrl+C** in the terminal.
+4. Open `http://localhost:3000` in a browser. The local preview may use a different port if one is already occupied; use the URL printed in the terminal. Stop the server with **Ctrl+C** in the terminal.
 
 Do not open `public/index.html` by double-clicking it: the server is needed for API requests, Web Crypto, and service-worker registration. `npm ci` installs the dependencies listed in the lockfile. The ZIP intentionally does not contain `node_modules` or secrets.
 
