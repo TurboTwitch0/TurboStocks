@@ -1,5 +1,11 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Release 1.6.1 — dimensional homepage showcase
+- Added a dimensional chart-study illustration to the learning-first hero with perspective, layered lesson and practice cards, orbit lighting, and a chart labeled as illustrative rather than market data.
+- Kept the existing Learn, Analyze, Practice, and Review shortcuts as real buttons into working sections; adjusted the stage at tablet and phone breakpoints. No autoplay or continuous motion was added; the scene remains static under reduced-motion settings.
+- Verified visually in Chrome at desktop and narrow viewport widths. Clicked Analyze and confirmed it opened Markets. Automated frontend checks cover truthful labels, responsive styling, reduced-motion support, and real route actions.
+- Verification on October 27, 2026: `npm run check` passed; `npm test` passed with **64 tests, 0 failures**.
+
 ## Release 1.6.0 — learning-first product and brand refresh
 - Rebuilt the home hero around the actual Learn → Analyze → Practice → Review workflow. Four clickable preview tiles open the real lessons, market tools, paper portfolio, and review sections; the primary CTA opens existing learning paths.
 - Reworked app palette, typography hierarchy, card surfaces, spacing, and responsive hero layout while retaining dark/light theme, existing icon family, saved data, and financial caveats. Added small hover feedback with reduced-motion support.

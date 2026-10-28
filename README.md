@@ -1,4 +1,4 @@
-# Turbo Stocks 1.6.0
+# Turbo Stocks 1.6.1
 
 Turbo Stocks is a financial education and paper-trading application. Paper trades use fixed educational sample prices; they do not access a brokerage or use market-provider prices. Existing lessons and saved lesson IDs, branding, themes, charts, news study tools, community tools, OCR, and the optional on-device tutor are retained.
 
@@ -25,7 +25,7 @@ Do not open `public/index.html` by double-clicking it: the server is needed for 
 
 - The home-page **Daily market update** opens on demand and shows recent news headlines with source links, a timestamped top-mover snapshot, and a limited-sample summary. Its status reports quote and headline availability separately. Movers include observed dollar and percentage change since provider-reported previous close and, when fresh intraday bars are available, a cautious 30-minute scenario blending 5-, 15-, and 30-minute direction. It shows an estimated dollar and percent move plus an illustrative recent-volatility range. This heuristic is not backtested and does not establish forecast accuracy; paper-trading prices remain separate fixed samples.
 
-- The refreshed home page leads with the real learning loop: lessons, chart study, simulated practice, and portfolio review. Each preview step opens its working app section. The style stays readable across dark/light themes and mobile widths.
+- The refreshed home page leads with a dimensional, illustrative chart-study stage and floating lesson/practice cards, then the real learning loop: lessons, chart study, simulated practice, and portfolio review. Each preview step opens its working app section. The style stays readable across dark/light themes and mobile widths.
 
 - Search company symbols and open a stock detail view. Sort the watchlist by saved order, symbol, sample price, or sample change. Stock details can prepare a paper order for review.
 - Place fractional paper orders after reviewing estimated cost/proceeds, buying power, and (for sales) realized P/L. Position prices are fixed samples; no fees, spreads, slippage, market hours, short selling, or real execution are modeled.

@@ -2124,12 +2124,48 @@ h1,h2,h3,h4 { letter-spacing:-.04em; }
     radial-gradient(circle at 94% 3%,rgba(77,125,243,.2),transparent 16rem),
     linear-gradient(145deg,color-mix(in srgb,var(--panel2) 86%,var(--accent) 14%),var(--panel));
   box-shadow:var(--shadow);
+  perspective:1100px;
 }
+.showcase-stage {
+  position:relative;
+  display:grid;
+  place-items:center;
+  height:286px;
+  margin:-4px -8px 24px;
+  isolation:isolate;
+  perspective:1100px;
+  background:radial-gradient(ellipse at 50% 54%,rgba(77,125,243,.2),transparent 56%),radial-gradient(ellipse at 53% 93%,rgba(85,208,170,.09),transparent 48%);
+}
+.showcase-orbit { position:absolute; z-index:-1; left:50%; top:52%; width:76%; height:49%; border:1px solid rgba(153,190,255,.22); border-radius:50%; transform:translate(-50%,-50%) rotate(-18deg) rotateX(64deg); box-shadow:0 0 24px rgba(77,125,243,.1),inset 0 0 20px rgba(77,125,243,.08); pointer-events:none; }
+.showcase-orbit-front { width:66%; height:56%; border-color:rgba(85,208,170,.18); transform:translate(-50%,-50%) rotate(28deg) rotateX(68deg); }
+.showcase-window { position:relative; z-index:1; width:min(92%,430px); min-height:215px; overflow:hidden; border:1px solid rgba(189,211,255,.3); border-radius:18px; color:#f5f8fc; background:linear-gradient(140deg,rgba(29,48,80,.98),rgba(12,21,39,.98)); box-shadow:0 26px 58px rgba(0,0,0,.44),0 0 40px rgba(77,125,243,.2),inset 0 1px 0 rgba(255,255,255,.16); transform:rotateY(-9deg) rotateX(4deg) rotateZ(-1.4deg); transform-style:preserve-3d; }
+.showcase-window-top,.showcase-window-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 15px; border-bottom:1px solid rgba(190,209,245,.12); }
+.showcase-window-brand { display:flex; align-items:center; gap:7px; font:600 12px "Space Grotesk","DM Sans",sans-serif; }
+.showcase-window-brand img { display:block; width:23px; height:23px; }
+.showcase-window-label,.showcase-kicker { color:#8cc5ff; font-size:8px; font-weight:800; letter-spacing:.15em; }
+.showcase-window-content { display:grid; grid-template-columns:1fr 1.16fr; align-items:center; gap:8px; padding:15px 16px 7px; }
+.showcase-window-content > div { display:grid; gap:8px; }
+.showcase-window-content strong { font:600 17px/1.2 "Space Grotesk","DM Sans",sans-serif; letter-spacing:-.045em; }
+.showcase-window-content small { color:#a7b6ca; font-size:9px; line-height:1.35; }
+.showcase-chart { display:block; width:100%; overflow:visible; color:#a9caff; filter:drop-shadow(0 0 8px rgba(140,197,255,.23)); }
+.showcase-window-foot { padding:9px 15px; border-top:1px solid rgba(190,209,245,.12); border-bottom:0; color:#a7b6ca; font-size:8px; }
+.showcase-window-foot span:first-child { display:flex; align-items:center; gap:6px; }
+.showcase-live-dot,.showcase-chip-dot { width:6px; height:6px; flex:0 0 auto; border-radius:50%; background:#55d0aa; box-shadow:0 0 9px rgba(85,208,170,.75); }
+.showcase-float { position:absolute; z-index:2; display:grid; gap:6px; width:max-content; max-width:45%; padding:11px 13px; border:1px solid rgba(190,209,245,.22); border-radius:12px; color:#f5f8fc; background:linear-gradient(145deg,rgba(31,49,76,.97),rgba(14,25,43,.97)); box-shadow:0 14px 30px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.08); }
+.showcase-float-left { left:-1%; top:12%; transform:rotate(-7deg) translateZ(30px); }
+.showcase-float-right { right:-1%; bottom:11%; transform:rotate(6deg) translateZ(44px); }
+.showcase-chip { display:flex; align-items:center; gap:5px; color:#9dcaff; font-size:8px; font-weight:800; letter-spacing:.15em; }
+.showcase-chip-mint { color:#78e5c2; }
+.showcase-float strong { font:600 11px/1.25 "Space Grotesk","DM Sans",sans-serif; }
+.showcase-float small { color:#a7b6ca; font-size:8px; line-height:1.3; }
 body.light .hero-workflow-preview {
   background:
     radial-gradient(circle at 94% 3%,rgba(77,125,243,.1),transparent 16rem),
     linear-gradient(145deg,#fff,#eef4fb);
 }
+body.light .showcase-stage { background:radial-gradient(ellipse at 50% 52%,rgba(49,94,216,.16),transparent 57%),radial-gradient(ellipse at 52% 96%,rgba(22,115,83,.09),transparent 45%); }
+body.light .showcase-window { border-color:rgba(95,125,178,.4); background:linear-gradient(140deg,#233a62,#101d35); }
+body.light .showcase-float { border-color:rgba(95,125,178,.38); background:linear-gradient(145deg,#293f64,#14233d); }
 .workflow-preview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
 .preview-label { color:var(--green); font-size:10px; font-weight:800; letter-spacing:.17em; }
 .preview-mark { display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--border); border-radius:15px; background:var(--panel); }
@@ -2180,6 +2216,7 @@ body.light .hero-workflow-preview {
   .hero { grid-template-columns:minmax(0,1fr) minmax(330px,.95fr); gap:26px; min-height:540px; }
   .hero h1 { font-size:clamp(46px,6vw,66px); }
   .hero-workflow-preview { padding:22px; }
+  .showcase-stage { height:265px; }
 }
 @media (max-width:760px) {
   .hero { min-height:0; grid-template-columns:minmax(0,1fr); gap:22px; padding:24px 0 28px; }
@@ -2189,6 +2226,11 @@ body.light .hero-workflow-preview {
   .hero-actions { justify-content:flex-start; gap:9px; margin-top:20px; }
   .hero-actions button { flex:0 1 auto; width:auto; min-height:48px; }
   .hero-workflow-preview { display:block; padding:20px; border-radius:20px; }
+  .showcase-stage { height:250px; margin:0 -5px 19px; }
+  .showcase-window { width:91%; min-height:200px; }
+  .showcase-window-content { grid-template-columns:.9fr 1.1fr; padding:13px 12px 6px; }
+  .showcase-float-left { left:-2%; top:7%; }
+  .showcase-float-right { right:-2%; bottom:6%; }
   .hero-workflow-preview h2 { font-size:25px; }
   .hero-step { min-height:74px; grid-template-columns:32px minmax(0,1fr) 13px; gap:8px; padding:10px 9px; }
   .hero-step-index { width:30px; height:30px; }
@@ -2201,6 +2243,13 @@ body.light .hero-workflow-preview {
   .hero-actions { flex-direction:column; align-items:stretch; }
   .hero-actions button { width:100%; }
   .hero-workflow-preview { padding:16px; }
+  .showcase-stage { height:226px; margin:0 -4px 16px; }
+  .showcase-window { width:94%; min-height:185px; }
+  .showcase-window-content strong { font-size:14px; }
+  .showcase-window-foot { font-size:7px; }
+  .showcase-float { max-width:42%; padding:8px 9px; }
+  .showcase-float strong { font-size:9px; }
+  .showcase-float small { font-size:7px; }
   .hero-workflow-steps { grid-template-columns:minmax(0,1fr); }
   .hero-step { min-height:65px; grid-template-columns:34px minmax(0,1fr) 16px; padding:10px 12px; }
   .hero-step-copy small { font-size:11px; }

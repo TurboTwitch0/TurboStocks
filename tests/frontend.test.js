@@ -1,4 +1,11 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const {harness}=require('./frontend-harness.cjs');
+test('homepage showcase is illustrative, responsive, and keeps real learning actions',()=>{
+    const html=fs.readFileSync('public/index.html','utf8'),css=fs.readFileSync('public/styles.css','utf8');
+    assert.match(html,/Illustrative chart · not market data/);assert.match(html,/aria-label="Illustration of the Turbo Stocks learning dashboard/);
+    for(const page of ['learn','markets','portfolio'])assert.match(html,new RegExp(`showPage\\('${page}'\\)`));
+    assert.match(css,/\.showcase-window[^}]*perspective|\.showcase-stage[^}]*perspective/);assert.match(css,/@media \(max-width:760px\)[\s\S]*?\.showcase-stage/);assert.match(css,/@media \(prefers-reduced-motion:reduce\)/);
+    assert.doesNotMatch(css,/showcase-[^}]*animation:\s*[^;]+infinite/);
+});
 test('home daily briefing is on demand, labels its source and separates live data from sample trading',()=>{
     const html=fs.readFileSync('public/index.html','utf8'),app=fs.readFileSync('public/app.js','utf8'),css=fs.readFileSync('public/styles.css','utf8');
     assert.match(html,/onclick="openDailyBriefing\(\)"/);assert.match(html,/id="dailyBriefModal" class="modal" role="dialog" aria-modal="true"/);assert.match(html,/cautious 30-minute scenario from recent 5-, 15-, and 30-minute trends/);
