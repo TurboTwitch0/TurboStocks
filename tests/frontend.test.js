@@ -1,10 +1,23 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const {harness}=require('./frontend-harness.cjs');
 test('home daily briefing is on demand, labels its source and separates live data from sample trading',()=>{
     const html=fs.readFileSync('public/index.html','utf8'),app=fs.readFileSync('public/app.js','utf8'),css=fs.readFileSync('public/styles.css','utf8');
-    assert.match(html,/onclick="openDailyBriefing\(\)"/);assert.match(html,/id="dailyBriefModal" class="modal" role="dialog" aria-modal="true"/);assert.match(html,/dampened 30-minute trend scenario/);
+    assert.match(html,/onclick="openDailyBriefing\(\)"/);assert.match(html,/id="dailyBriefModal" class="modal" role="dialog" aria-modal="true"/);assert.match(html,/cautious 30-minute scenario from recent 5-, 15-, and 30-minute trends/);
     assert.match(app,/fetch\("\/api\/trending-stocks"/);assert.match(app,/fetch\("\/api\/search\?q=stock%20market"/);
     assert.match(app,/createTextNode|textContent = article\.title/);assert.match(app,/quote\.priceChange/);assert.match(app,/quote\.previousPrice/);assert.match(app,/estimate30m/);assert.match(app,/movePercent/);assert.match(app,/directionalAgreement/);assert.match(app,/recent-volatility range/);assert.match(app,/formatQuoteMoney/);assert.match(app,/quotes may be delayed/i);assert.match(app,/fixed sample prices/i);
     assert.match(app,/function closeDailyBriefing\(\)/);assert.match(css,/\.daily-brief-modal/);
+});
+test('daily briefing reports quote and headline availability independently',async()=>{
+    const quote={symbol:'AAPL',name:'Apple',price:101,previousPrice:100,priceChange:1,change:1,marketTime:new Date().toISOString(),currency:'USD',estimate30m:null};
+    const withQuotes=harness(new Map(),{boot:true});withQuotes.context.fetch=async url=>url.includes('/api/trending-stocks')
+        ?Response.json({quotes:[quote],fetchedAt:new Date().toISOString(),source:'Test quote provider',expectedSymbols:1})
+        :new Response('',{status:503});
+    await withQuotes.run('openDailyBriefing()');
+    assert.match(withQuotes.element('dailyBriefStatus').textContent,/Quotes: 1 tracked symbols returned/);assert.match(withQuotes.element('dailyBriefStatus').textContent,/Headlines: unavailable/);
+    const withNews=harness(new Map(),{boot:true});withNews.context.fetch=async url=>url.includes('/api/trending-stocks')
+        ?new Response('',{status:503})
+        :Response.json({articles:[{title:'Test headline',link:'https://news.example/story',publishedAt:'',summary:''}],source:'Test News'});
+    await withNews.run('openDailyBriefing()');
+    assert.match(withNews.element('dailyBriefStatus').textContent,/Quotes: unavailable/);assert.match(withNews.element('dailyBriefStatus').textContent,/Headlines: 1 returned/);
 });
 async function signup(h,email='student@example.com') {
     h.element('profileName').value='Student';h.element('profileEmail').value=email;h.element('profilePassword').value='unique-demo-pass';h.element('profilePassword2').value='unique-demo-pass';h.run('authMode="signup"');await h.run('submitAuth()');
@@ -26,6 +39,17 @@ test('sign-in uses a native form and local sign-out never claims success after s
     h.run('setAuthMode("signin")');assert.equal(h.element('profileName').required,false);assert.equal(h.element('profilePassword2').required,false);
     await signup(h);h.storage.removeItem=()=>{throw new Error('Blocked')};h.run('signOut()');
     assert.equal(h.store.get('novaSession'),'student@example.com');assert.equal(h.run('profile.email'),'student@example.com');assert.match(h.element('storageStatus').textContent,/still active/);
+});
+test('password visibility is accessible, reset on mode change and close, and sign-in shows progress',async()=>{
+    const h=harness(new Map(),{boot:true});
+    h.run('setAuthMode("signin")');h.element('profilePassword').type='password';
+    h.run('toggleAuthPasswordVisibility("profilePassword")');assert.equal(h.element('profilePassword').type,'text');assert.equal(h.element('authPasswordToggle').textContent,'Hide');
+    h.run('setAuthMode("signup")');assert.equal(h.element('profilePassword').type,'password');assert.equal(h.element('confirmPasswordField').hidden,false);assert.equal(h.element('authPasswordConfirmToggle').hidden,false);
+    h.element('profilePassword2').type='password';h.run('toggleAuthPasswordVisibility("profilePassword2")');assert.equal(h.element('profilePassword2').type,'text');
+    h.element('profilePassword').value='sensitive-demo-value';h.element('profilePassword2').value='sensitive-demo-value';h.run('closeAuth()');assert.equal(h.element('profilePassword').value,'');assert.equal(h.element('profilePassword2').value,'');assert.equal(h.element('profilePassword2').type,'password');
+    await signup(h);h.run('signOut()');h.run('setAuthMode("signin")');h.element('profileEmail').value='student@example.com';h.element('profilePassword').value='unique-demo-pass';
+    const pending=h.run('submitAuth()');assert.equal(h.element('authSubmit').disabled,true);assert.equal(h.element('authSubmit').textContent,'Signing in…');await pending;
+    assert.equal(h.element('authSubmit').disabled,false);assert.equal(h.element('authSubmit').textContent,'Sign in');assert.equal(h.store.get('novaSession'),'student@example.com');
 });
 test('blocked storage no longer crashes startup or tutor',async()=>{
     const h=harness(new Map(),{blocked:true,boot:true});assert.equal(h.run('storageUnavailable'),true);assert.equal(h.element('storageStatus').hidden,false);

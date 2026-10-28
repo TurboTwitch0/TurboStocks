@@ -1439,22 +1439,32 @@
             required
         >
 
-        <input
-            id="profilePassword" aria-label="Demo password"
-            type="password"
-            placeholder="Password"
-            autocomplete="current-password"
-            minlength="6"
-            required
-        >
+        <div class="auth-password-field">
+            <input
+                id="profilePassword" aria-label="Demo password"
+                type="password"
+                placeholder="Password"
+                autocomplete="current-password"
+                minlength="6"
+                required
+            >
+            <button type="button" class="secondary auth-password-toggle" id="authPasswordToggle"
+                aria-label="Show password" aria-controls="profilePassword" aria-pressed="false"
+                onclick="toggleAuthPasswordVisibility('profilePassword')">Show</button>
+        </div>
 
-        <input
-            id="profilePassword2" aria-label="Confirm demo password"
-            type="password"
-            placeholder="Confirm password"
-            autocomplete="new-password"
-            hidden
-        >
+        <div class="auth-password-field" id="confirmPasswordField" hidden>
+            <input
+                id="profilePassword2" aria-label="Confirm demo password"
+                type="password"
+                placeholder="Confirm password"
+                autocomplete="new-password"
+                hidden
+            >
+            <button type="button" class="secondary auth-password-toggle" id="authPasswordConfirmToggle"
+                aria-label="Show confirmation password" aria-controls="profilePassword2" aria-pressed="false"
+                onclick="toggleAuthPasswordVisibility('profilePassword2')" hidden>Show</button>
+        </div>
 
         <button
             type="submit"
@@ -1486,7 +1496,7 @@
         <p id="dailyBriefDate" class="small"></p>
         <p id="dailyBriefStatus" role="status">Open the update to load available provider information.</p>
         <h3>Market snapshot</h3><p id="dailyBriefSummary"></p>
-        <h3>Top movers</h3><p class="small">Observed change since the previous close, plus a dampened 30-minute trend scenario with an illustrative recent-volatility range. This is not a guaranteed forecast.</p><div id="dailyBriefMovers" class="daily-brief-list"></div>
+        <h3>Top movers</h3><p class="small">Observed change since the previous close, plus a cautious 30-minute scenario from recent 5-, 15-, and 30-minute trends. Dollar and percentage ranges illustrate recent volatility; this unbacktested heuristic is not a validated forecast.</p><div id="dailyBriefMovers" class="daily-brief-list"></div>
         <h3>Recent headlines</h3><div id="dailyBriefNews" class="daily-brief-list"></div>
         <p id="dailyBriefSources" class="small"></p>
         <p class="small">Market data can be delayed or unavailable. Headlines are provider excerpts, not verified recommendations. Paper trading uses separate fixed sample prices.</p>
@@ -1572,3 +1582,4 @@
 
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-# Turbo Stocks 1.5.5
+# Turbo Stocks 1.5.6
 
 Turbo Stocks is a financial education and paper-trading application. Paper trades use fixed educational sample prices; they do not access a brokerage or use market-provider prices. Existing lessons and saved lesson IDs, branding, themes, charts, news study tools, community tools, OCR, and the optional on-device tutor are retained.
 
@@ -23,7 +23,7 @@ Do not open `public/index.html` by double-clicking it: the server is needed for 
 
 - The responsive layout now has a compact phone dashboard, four simulated-account metrics, a five-item bottom bar, and a “More” menu for Trending, News, Tutor, Community Pulse, and tools. The phone header keeps search, theme, and profile controls on separate, reachable rows. Tablet and desktop keep their wider layouts.
 
-- The home-page **Daily market update** opens on demand and shows recent news headlines with source links, a timestamped top-mover snapshot, and a limited-sample summary. Movers include observed dollar and percentage change since provider-reported previous close and, when fresh intraday bars are available, a cautious 30-minute scenario blending 5-, 15-, and 30-minute direction. It shows an estimated dollar and percent move plus an illustrative recent-volatility range. This heuristic is not backtested and does not establish forecast accuracy; paper-trading prices remain separate fixed samples.
+- The home-page **Daily market update** opens on demand and shows recent news headlines with source links, a timestamped top-mover snapshot, and a limited-sample summary. Its status reports quote and headline availability separately. Movers include observed dollar and percentage change since provider-reported previous close and, when fresh intraday bars are available, a cautious 30-minute scenario blending 5-, 15-, and 30-minute direction. It shows an estimated dollar and percent move plus an illustrative recent-volatility range. This heuristic is not backtested and does not establish forecast accuracy; paper-trading prices remain separate fixed samples.
 
 - Search company symbols and open a stock detail view. Sort the watchlist by saved order, symbol, sample price, or sample change. Stock details can prepare a paper order for review.
 - Place fractional paper orders after reviewing estimated cost/proceeds, buying power, and (for sales) realized P/L. Position prices are fixed samples; no fees, spreads, slippage, market hours, short selling, or real execution are modeled.
@@ -39,7 +39,7 @@ Do not open `public/index.html` by double-clicking it: the server is needed for 
 
 Run `npm run check` for JavaScript syntax checks and `npm test` for automated tests. The tests cover paper arithmetic and reconciliation, fractions, validation, blocked/quota storage behavior, profiles and stale tabs, tutor/provider failure handling, backup import, navigation and inline handlers, mobile navigation markup and responsive rules, server routes/provider errors/rate limits, the Netlify function adapter, the Vercel Express entry point, and simulated service-worker cache rules. See [CHANGES-AND-TESTS.md](CHANGES-AND-TESTS.md) for the latest exact result.
 
-The frontend tests use a minimal simulated DOM; they are not visual browser tests. Service-worker checks use a simulated worker. Server-route tests use an actual local HTTP server and the complete 61-test suite passes. The mover scenario is an unbacktested heuristic, not a validated forecast. Rendered-browser layouts, a real Netlify deployment, installed PWA lifecycle, GPU model inference, and OCR download were not verified in this release. See [CHANGES-AND-TESTS.md](CHANGES-AND-TESTS.md) for exact results and limitations.
+The frontend tests use a minimal simulated DOM; they are not visual browser tests. Service-worker checks use a simulated worker. Server-route tests use an actual local HTTP server and the complete 63-test suite passes. The mover scenario is an unbacktested heuristic, not a validated forecast. Rendered-browser layouts, a real Netlify deployment, installed PWA lifecycle, GPU model inference, and OCR download were not verified in this release. See [CHANGES-AND-TESTS.md](CHANGES-AND-TESTS.md) for exact results and limitations.
 
 ## Deploy on Vercel from GitHub (when you are ready)
 

@@ -1795,9 +1795,14 @@ async function openDailyBriefing() {
     $("dailyBriefSources").textContent = sources.length
         ? "Sources: " + [...new Set(sources)].join(" · ") + ". Quotes may be delayed; this is not investment advice."
         : "No providers responded. No current market facts are shown.";
-    $("dailyBriefStatus").textContent =
-        quotesResult.status === "fulfilled" || newsResult.status === "fulfilled"
-            ? "Latest provider information loaded." : "Market providers are temporarily unavailable.";
+    const quoteCount = quotesResult.status === "fulfilled" && Array.isArray(quotesResult.value.quotes)
+        ? quotesResult.value.quotes.length : 0;
+    const headlineCount = newsResult.status === "fulfilled" && Array.isArray(newsResult.value.articles)
+        ? newsResult.value.articles.length : 0;
+    $("dailyBriefStatus").textContent = [
+        quoteCount ? `Quotes: ${quoteCount} tracked symbols returned; provider data may be delayed.` : "Quotes: unavailable.",
+        newsResult.status === "fulfilled" ? `Headlines: ${headlineCount} returned.` : "Headlines: unavailable."
+    ].join(" ");
     modal.querySelector(".close")?.focus();
 }
 
@@ -3430,6 +3435,10 @@ function closeAuth() {
 
     $("authModal").classList.remove("open");
     $("authModal").style.display = "none";
+    $("profilePassword").value = "";
+    $("profilePassword2").value = "";
+    setAuthPasswordVisibility("profilePassword", false);
+    setAuthPasswordVisibility("profilePassword2", false);
     showAuthError("");
 
 }
@@ -3455,8 +3464,12 @@ function setAuthMode(mode) {
 
     $("profileName").hidden = !signup;
     $("profilePassword2").hidden = !signup;
+    $("confirmPasswordField").hidden = !signup;
+    $("authPasswordConfirmToggle").hidden = !signup;
     $("profileName").required = signup;
     $("profilePassword2").required = signup;
+    setAuthPasswordVisibility("profilePassword", false);
+    setAuthPasswordVisibility("profilePassword2", false);
 
     $("profilePassword").autocomplete = signup
         ? "new-password"
@@ -3468,6 +3481,21 @@ function setAuthMode(mode) {
 
     showAuthError("");
 
+}
+
+function setAuthPasswordVisibility(inputId, visible) {
+    const input = $(inputId);
+    const button = $(inputId === "profilePassword2" ? "authPasswordConfirmToggle" : "authPasswordToggle");
+    if (!input || !button) return;
+    const show = Boolean(visible);
+    input.type = show ? "text" : "password";
+    button.textContent = show ? "Hide" : "Show";
+    button.setAttribute("aria-pressed", String(show));
+    button.setAttribute("aria-label", `${show ? "Hide" : "Show"} ${inputId === "profilePassword2" ? "confirmation " : ""}password`);
+}
+
+function toggleAuthPasswordVisibility(inputId) {
+    setAuthPasswordVisibility(inputId, $(inputId).type === "password");
 }
 
 
@@ -3652,8 +3680,9 @@ async function submitAuth() {
     if (authPending) return;
 
     const button = $("authSubmit");
+    const submitLabel = button?.textContent || (authMode === "signup" ? "Create account" : "Sign in");
     authPending = true;
-    if (button) button.disabled = true;
+    if (button) {button.disabled = true;button.textContent = authMode === "signup" ? "Creating profile…" : "Signing in…";button.setAttribute("aria-busy", "true");}
 
     try {
         await submitAuthCore();
@@ -3661,7 +3690,7 @@ async function submitAuth() {
         showAuthError(error.message || "Could not save this profile. Check browser storage settings.");
     } finally {
         authPending = false;
-        if (button) button.disabled = false;
+        if (button) {button.disabled = false;button.textContent = submitLabel;button.setAttribute("aria-busy", "false");}
     }
 
 }
@@ -4400,6 +4429,8 @@ window.runSearchResult =
 
 window.openAuth =
     openAuth;
+
+window.toggleAuthPasswordVisibility = toggleAuthPasswordVisibility;
 
 window.closeAuth =
     closeAuth;

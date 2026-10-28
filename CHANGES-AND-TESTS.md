@@ -1,5 +1,11 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Release 1.5.6 — sign-in feedback and market-data status
+- Added accessible show/hide controls for local demo passwords. Password fields clear when the sign-in dialog closes; submit buttons announce and display the active sign-in or profile-creation state.
+- The market briefing now reports quote and headline availability separately, so a successful headlines request cannot imply that quotes also loaded.
+- Clarified that the multi-window mover scenario is unbacktested, and retained the stale/short-history suppression. Local demo profiles remain browser-only; no cloud account or cross-device sync is implemented.
+- Verification on October 27, 2026: `npm run check` passed; `npm test` passed with **63 tests, 0 failures**, including local auth progress/password visibility and independent quote/news failure states.
+
 ## Release 1.5.5 — cautious mover estimate
 - Replaced one-window straight-line extrapolation with a heavily dampened blend of 5-, 15-, and 30-minute returns. The estimate shrinks further when windows disagree and caps the center move at half of recent 30-minute volatility.
 - Corrected volatility scaling to use elapsed minutes, and calculate the illustrative interval with compounded returns. The briefing now displays the estimated dollar and percentage move and percentage/dollar interval, plus simple time-window agreement.

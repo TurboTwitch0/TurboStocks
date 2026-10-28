@@ -1422,6 +1422,31 @@ body.preview-phone .trending-widgets .tv-widget {
     display: none;
 }
 
+.modal-box .auth-password-field[hidden],
+.modal-box button[hidden] {
+    display: none !important;
+}
+
+.auth-password-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-box .auth-password-field input {
+    flex: 1 1 auto;
+    width: 1px;
+    min-width: 0;
+}
+
+.auth-password-toggle {
+    flex: 0 0 auto;
+    min-width: 64px;
+    min-height: 44px;
+    margin: 7px 0;
+    padding: 8px 12px;
+}
+
 .modal-box {
     width: min(500px,100%);
     max-height: 90vh;
@@ -2028,3 +2053,4 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 
 /* Reserve scrollbar space so switching between short and long tabs does not shift navigation. */
 html { scrollbar-gutter: stable; }
+
