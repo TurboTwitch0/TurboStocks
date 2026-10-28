@@ -2,6 +2,7 @@ const {test}=require('node:test');const assert=require('node:assert/strict');con
 test('home daily briefing is on demand, labels its source and separates live data from sample trading',()=>{
     const html=fs.readFileSync('public/index.html','utf8'),app=fs.readFileSync('public/app.js','utf8'),css=fs.readFileSync('public/styles.css','utf8');
     assert.match(html,/onclick="openDailyBriefing\(\)"/);assert.match(html,/id="dailyBriefModal" class="modal" role="dialog" aria-modal="true"/);assert.match(html,/cautious 30-minute scenario from recent 5-, 15-, and 30-minute trends/);
+    assert.match(html,/src="\/icons\/turbo-mark\.svg"/);assert.match(html,/id="workflowPreviewTitle"/);assert.match(html,/Explore learning paths/);
     assert.match(app,/fetch\("\/api\/trending-stocks"/);assert.match(app,/fetch\("\/api\/search\?q=stock%20market"/);
     assert.match(app,/createTextNode|textContent = article\.title/);assert.match(app,/quote\.priceChange/);assert.match(app,/quote\.previousPrice/);assert.match(app,/estimate30m/);assert.match(app,/movePercent/);assert.match(app,/directionalAgreement/);assert.match(app,/recent-volatility range/);assert.match(app,/formatQuoteMoney/);assert.match(app,/quotes may be delayed/i);assert.match(app,/fixed sample prices/i);
     assert.match(app,/function closeDailyBriefing\(\)/);assert.match(css,/\.daily-brief-modal/);

@@ -1,5 +1,5 @@
-const CACHE = 'turbo-shell-v1.5.6-auth-feedback';
-const SHELL = ['/', '/styles.css', '/app.js', '/ui.js', '/paper-engine.js', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE = 'turbo-shell-v1.6-brand';
+const SHELL = ['/', '/styles.css', '/app.js', '/ui.js', '/paper-engine.js', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/turbo-mark.svg'];
 self.addEventListener('install', event => {event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));});
 self.addEventListener('activate', event => {event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('turbo-shell-') && key !== CACHE).map(key => caches.delete(key)))));});
 self.addEventListener('fetch', event => {

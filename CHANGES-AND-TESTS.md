@@ -1,5 +1,12 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Release 1.6.0 — learning-first product and brand refresh
+- Rebuilt the home hero around the actual Learn → Analyze → Practice → Review workflow. Four clickable preview tiles open the real lessons, market tools, paper portfolio, and review sections; the primary CTA opens existing learning paths.
+- Reworked app palette, typography hierarchy, card surfaces, spacing, and responsive hero layout while retaining dark/light theme, existing icon family, saved data, and financial caveats. Added small hover feedback with reduced-motion support.
+- Added an original matching vector mark/favicon and cached it in the PWA shell.
+- Created an editable brand sheet, logo variants, landscape/portrait promo artwork, and concise launch copy under the workspace outputs folder.
+- Verification on October 27, 2026: `npm run check` passed; `npm test` passed with **63 tests, 0 failures**. Rendered the home page in Chrome at the local preview and confirmed the learning workflow, market update, sample account, and navigation are present.
+
 ## Release 1.5.6 — sign-in feedback and market-data status
 - Added accessible show/hide controls for local demo passwords. Password fields clear when the sign-in dialog closes; submit buttons announce and display the active sign-in or profile-creation state.
 - The market briefing now reports quote and headline availability separately, so a successful headlines request cannot imply that quotes also loaded.

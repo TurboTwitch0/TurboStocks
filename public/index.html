@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/icons/turbo-mark.svg" type="image/svg+xml">
 
     <meta name="theme-color" content="#0b1222">
     <link rel="manifest" href="/manifest.webmanifest">
@@ -29,7 +30,7 @@
 <header class="topbar">
 
     <button type="button" class="brand-home" onclick="showPage('home')" aria-label="Turbo Stocks home">
-        <span class="brand-mark" aria-hidden="true">↗</span>
+        <span class="brand-mark" aria-hidden="true"><img src="/icons/turbo-mark.svg" alt="" width="34" height="34"></span>
         <span>Turbo <strong>Stocks</strong></span>
     </button>
 
@@ -125,59 +126,57 @@
 
         <div>
 
-            <span class="eyebrow">
-                THE SMARTER WAY TO LEARN MARKETS
-            </span>
+            <span class="eyebrow">LEARN · ANALYZE · PRACTICE · REVIEW</span>
 
             <h1>
-                Learn markets.
+                Learn the market.
                 <br>
-                <span>Think smarter.</span>
-                <br>
-                Practice safely.
+                <span>Practice with purpose.</span>
             </h1>
 
             <p>
-                Turbo Stocks brings together interactive charts,
-                practical market lessons, news study tools,
-                paper trading, and a built-in study tutor.
+                Build market knowledge with guided lessons, useful study tools, and a paper portfolio made for practice.
             </p>
 
             <div class="hero-actions">
-
-                <button
-                    class="primary"
-                    onclick="showPage('learn')"
-                >
-                    Start Learning
+                <button type="button" class="primary" onclick="showPage('learn')">
+                    Explore learning paths <span aria-hidden="true">↗</span>
                 </button>
-
-                <button
-                    class="secondary"
-                    onclick="showPage('markets')"
-                >
-                    Explore Markets
+                <button type="button" class="secondary" onclick="openDailyBriefing()">
+                    Open market update
                 </button>
-
             </div>
 
+            <p class="hero-trust-note">Simulated money only <span aria-hidden="true">·</span> Progress saved in this browser</p>
+            <p class="hero-principle" id="dailyQuote">A chart is evidence, not a crystal ball.</p>
         </div>
 
 
-        <div class="hero-card">
-
-            <div class="quote-mark">
-                “
+        <section class="hero-workflow-preview" aria-labelledby="workflowPreviewTitle">
+            <div class="workflow-preview-head">
+                <span class="preview-label">YOUR LEARNING LOOP</span>
+                <span class="preview-mark" aria-hidden="true">
+                    <img src="/icons/turbo-mark.svg" alt="" width="42" height="42">
+                </span>
             </div>
-
-            <h3 id="dailyQuote">
-                The goal isn't to predict every move.
-                It's to build better decisions.
-            </h3>
-
-            <p>
-                Learn → Analyze → Practice → Review.
-            </p>
+            <h2 id="workflowPreviewTitle">A clear next step, at every stage.</h2>
+            <p class="workflow-preview-intro">These shortcuts open working parts of Turbo Stocks.</p>
+            <div class="hero-workflow-steps">
+                <button type="button" class="hero-step" onclick="showPage('learn')">
+                    <span class="hero-step-index">01</span><span class="hero-step-copy"><strong>Learn</strong><small>Lessons and quick checks</small></span><span class="hero-step-arrow" aria-hidden="true">↗</span>
+                </button>
+                <button type="button" class="hero-step" onclick="showPage('markets')">
+                    <span class="hero-step-index">02</span><span class="hero-step-copy"><strong>Analyze</strong><small>Charts and study tools</small></span><span class="hero-step-arrow" aria-hidden="true">↗</span>
+                </button>
+                <button type="button" class="hero-step" onclick="showPage('portfolio')">
+                    <span class="hero-step-index">03</span><span class="hero-step-copy"><strong>Practice</strong><small>Paper trades, no real orders</small></span><span class="hero-step-arrow" aria-hidden="true">↗</span>
+                </button>
+                <button type="button" class="hero-step" onclick="showPage('portfolio')">
+                    <span class="hero-step-index">04</span><span class="hero-step-copy"><strong>Review</strong><small>Positions and trade history</small></span><span class="hero-step-arrow" aria-hidden="true">↗</span>
+                </button>
+            </div>
+            <div class="workflow-preview-foot"><span class="workflow-dot" aria-hidden="true"></span>Local demo profiles · no cloud sync</div>
+        </section>
 
         </div>
 

@@ -8,7 +8,7 @@ test('service worker caches shell only, bypasses APIs and external requests',asy
  caches:{open:async()=>({addAll:async files=>added.push(...files),put:async request=>put.push(request.url)}),keys:async()=>[],match:async()=>({offline:true})},fetch:async()=>({ok:true,clone(){return {};}})});
  vm.runInContext(fs.readFileSync('public/sw.js','utf8'),context);
  let pending;handlers.install({waitUntil:promise=>pending=promise});await pending;
- assert.ok(added.includes('/'));assert.ok(!added.some(path=>path.startsWith('/api')));
+ assert.ok(added.includes('/'));assert.ok(added.includes('/icons/turbo-mark.svg'));assert.ok(!added.some(path=>path.startsWith('/api')));
  for (const url of ['https://turbo.test/api/trending-stocks','https://external.test/model.wasm','https://turbo.test/health']) {
   let handled=false;handlers.fetch({request:{method:'GET',url},respondWith:()=>handled=true});assert.equal(handled,false,url);
  }
@@ -32,3 +32,4 @@ test('release service worker uses a fresh cache and removes prior Turbo Stocks s
  let pending;handlers.activate({waitUntil:promise=>pending=promise});await pending;
  assert.deepEqual(deleted,['turbo-shell-v1.3.1','turbo-shell-v1.3.2','turbo-shell-v1.3.3']);
 });
+
