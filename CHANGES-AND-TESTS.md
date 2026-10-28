@@ -1,5 +1,10 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Dependency installation repair — October 27, 2026
+- Fixed the exact Vercel npm E404: a broad application-version replacement had incorrectly changed the locked `mime` version and `send` dependency requirement to nonexistent `mime@1.6.1`. Restored the published `mime@1.6.0` version, tarball URL, and dependency requirement; the application remains version 1.6.1.
+- Added a regression check comparing every installed dependency's version and requirements with the lockfile. It failed against the corrupted lockfile even when npm reused a cached tarball, then passed after the repair.
+- Verified `npm install` and `npm ci` using separate empty caches, syntax checks, and **65 tests, 0 failures**. npm's audit still reports two existing dependency findings (one moderate, one high); these did not cause the installation failure.
+
 ## Release 1.6.1 — dimensional homepage showcase
 - Added a dimensional chart-study illustration to the learning-first hero with perspective, layered lesson and practice cards, orbit lighting, and a chart labeled as illustrative rather than market data.
 - Kept the existing Learn, Analyze, Practice, and Review shortcuts as real buttons into working sections; adjusted the stage at tablet and phone breakpoints. No autoplay or continuous motion was added; the scene remains static under reduced-motion settings.
