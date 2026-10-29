@@ -1,5 +1,10 @@
 # Release 1.5.4 Vercel and GitHub deployment readiness
 
+## Compatible dependency patches — October 28, 2026
+- Updated only the locked transitive packages `body-parser` 1.20.8 → 1.20.9 and `qs` 6.16.0 → 6.16.2 within the existing dependency constraints. These resolve the [body-parser advisory](https://github.com/advisories/GHSA-27r3-jxmh-p828) and [qs advisory](https://github.com/advisories/GHSA-6pq8-jhm2-2vcw). No dependency was added and the application version remains 1.6.1.
+- Started from current GitHub main `0bf38e0` and preserved v0's current-cache/canonical-path offline query-string repair. No UI, trading, authentication, storage, or provider code changed.
+- Empty-cache `npm ci` passed and reported **0 npm audit findings**. `npm run check` passed and **66 tests passed, 0 failures**. No new rendered-browser or real-device verification was performed for this dependency-only pass.
+
 ## Dependency installation repair — October 27, 2026
 - Fixed the exact Vercel npm E404: a broad application-version replacement had incorrectly changed the locked `mime` version and `send` dependency requirement to nonexistent `mime@1.6.1`. Restored the published `mime@1.6.0` version, tarball URL, and dependency requirement; the application remains version 1.6.1.
 - Added a regression check comparing every installed dependency's version and requirements with the lockfile. It failed against the corrupted lockfile even when npm reused a cached tarball, then passed after the repair.
