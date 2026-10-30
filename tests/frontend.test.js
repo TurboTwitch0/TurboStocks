@@ -27,6 +27,43 @@ test('daily briefing reports quote and headline availability independently',asyn
     await withNews.run('openDailyBriefing()');
     assert.match(withNews.element('dailyBriefStatus').textContent,/Quotes: unavailable/);assert.match(withNews.element('dailyBriefStatus').textContent,/Headlines: 1 returned/);
 });
+test('reopening the daily briefing ignores older responses and keeps the reader focus',async()=>{
+    const h=harness(new Map(),{boot:true}),pending=[];
+    let focusCount=0;
+    h.element('dailyBriefModal').querySelector=()=>({focus(){focusCount++;}});
+    h.context.fetch=()=>new Promise(resolve=>pending.push(resolve));
+    h.element('dailyBriefSources').textContent='Sources: old provider';
+    const oldRequest=h.run('openDailyBriefing()');
+    assert.equal(focusCount,1);
+    assert.equal(h.element('dailyBriefSources').textContent,'Waiting for current providers…');
+    h.run('closeDailyBriefing()');
+    const currentRequest=h.run('openDailyBriefing()');
+    pending[2](Response.json({quotes:[{symbol:'NEW',name:'Current quote',change:2}],source:'Current provider'}));
+    pending[3](Response.json({articles:[{title:'Current headline'}],source:'Current news'}));
+    await currentRequest;
+    assert.equal(focusCount,2,'finishing a request must not move keyboard focus');
+    assert.match(h.element('dailyBriefSources').textContent,/Current provider/);
+    assert.equal(h.element('dailyBriefMovers').children.length,1,'one quote is shown once');
+    pending[0](Response.json({quotes:[{symbol:'OLD',name:'Stale quote',change:-2}],source:'Old provider'}));
+    pending[1](Response.json({articles:[{title:'Old headline'}],source:'Old news'}));
+    await oldRequest;
+    assert.match(h.element('dailyBriefSources').textContent,/Current provider/);
+    assert.doesNotMatch(h.element('dailyBriefSources').textContent,/Old provider/);
+    assert.equal(h.element('dailyBriefNews').children[0].children[0].textContent,'Current headline');
+});
+test('daily briefing recovers independently from malformed providers and counts usable unique records',async()=>{
+    const h=harness(new Map(),{boot:true});
+    h.context.fetch=async url=>url.includes('/api/trending-stocks')?Response.json(null):Response.json({articles:[null,{title:'Usable headline'}]});
+    await h.run('openDailyBriefing()');
+    assert.match(h.element('dailyBriefStatus').textContent,/Quotes: unavailable/);
+    assert.match(h.element('dailyBriefStatus').textContent,/Headlines: 1 returned/);
+    assert.equal(h.element('dailyBriefNews').children[0].children[0].textContent,'Usable headline');
+    h.context.fetch=async url=>url.includes('/api/trending-stocks')?Response.json({quotes:[null,{symbol:'AAPL',name:'Apple',change:1},{symbol:'AAPL',name:'Duplicate',change:1},{symbol:'MSFT',change:null},{symbol:'NVDA',name:'Nvidia',change:-1}]}):Response.json({articles:null});
+    await h.run('openDailyBriefing()');
+    assert.match(h.element('dailyBriefStatus').textContent,/Quotes: 2 tracked symbols returned/);
+    assert.match(h.element('dailyBriefStatus').textContent,/Headlines: unavailable/);
+    assert.equal(h.element('dailyBriefMovers').children.length,2);
+});
 async function signup(h,email='student@example.com') {
     h.element('profileName').value='Student';h.element('profileEmail').value=email;h.element('profilePassword').value='unique-demo-pass';h.element('profilePassword2').value='unique-demo-pass';h.run('authMode="signup"');await h.run('submitAuth()');
     assert.equal(h.store.get('novaSession'),email,h.element('authError').textContent);
