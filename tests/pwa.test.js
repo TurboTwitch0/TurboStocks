@@ -27,7 +27,7 @@ test('offline shell requests with query parameters use the current release cache
   assert.equal((await response).offline,true);
  }
  assert.deepEqual(lookups,['/','/app.js','/styles.css']);
- assert.ok(opened.every(name=>name==='turbo-shell-v1.6.1-offline-query'));
+ assert.ok(opened.every(name=>name==='turbo-shell-v1.6.1-brief-refresh'));
 });
 test('manifest icons are actual PNG files with declared sizes', () => {
  const manifest=JSON.parse(fs.readFileSync('public/manifest.webmanifest','utf8'));

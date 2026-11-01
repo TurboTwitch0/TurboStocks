@@ -1669,26 +1669,34 @@ function loadNewsWidget(force = false) {
 
 
 /* Show current provider data separately from the simulator's fixed sample prices. */
+let dailyBriefRequest = 0;
 async function openDailyBriefing() {
     const modal = $("dailyBriefModal");
     if (!modal) return;
+    const request = ++dailyBriefRequest;
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
+    modal.querySelector(".close")?.focus();
     $("dailyBriefDate").textContent = new Date().toLocaleDateString(undefined, {
         weekday: "long", year: "numeric", month: "long", day: "numeric"
     });
     $("dailyBriefStatus").textContent = "Loading available headlines and quotes…";
     $("dailyBriefSummary").textContent = "";
+    $("dailyBriefSources").textContent = "Waiting for current providers…";
     $("dailyBriefMovers").replaceChildren();
     $("dailyBriefNews").replaceChildren();
     const [quotesResult, newsResult] = await Promise.allSettled([
         fetch("/api/trending-stocks", { cache: "no-store", signal: AbortSignal.timeout(15000) })
-            .then(response => { if (!response.ok) throw new Error("Quotes unavailable"); return response.json(); }),
+            .then(response => { if (!response.ok) throw new Error("Quotes unavailable"); return response.json(); })
+            .then(snapshot => { if (!snapshot || !Array.isArray(snapshot.quotes)) throw new Error("Invalid quote response"); return snapshot; }),
         fetch("/api/search?q=stock%20market", { cache: "no-store", signal: AbortSignal.timeout(12000) })
             .then(response => { if (!response.ok) throw new Error("Headlines unavailable"); return response.json(); })
+            .then(snapshot => { if (!snapshot || !Array.isArray(snapshot.articles)) throw new Error("Invalid headline response"); return snapshot; })
     ]);
-    if (!modal.classList.contains("open")) return;
+    if (request !== dailyBriefRequest || !modal.classList.contains("open")) return;
     const sources = [];
+    let quoteCount = 0;
+    let headlineCount = 0;
     const appendCard = (container, parts) => {
         const card = document.createElement("article");
         card.className = "daily-brief-item";
@@ -1698,15 +1706,18 @@ async function openDailyBriefing() {
     if (quotesResult.status === "fulfilled") {
         const snapshot = quotesResult.value;
         const quotes = (Array.isArray(snapshot.quotes) ? snapshot.quotes : [])
-            .filter(quote => Number.isFinite(Number(quote.change)))
+            .filter(quote => quote && typeof quote.symbol === "string" &&
+                typeof quote.change === "number" && Number.isFinite(quote.change))
+            .filter((quote, index, all) => all.findIndex(item => item.symbol === quote.symbol) === index)
             .sort((first, second) => Number(second.change) - Number(first.change));
+        quoteCount = quotes.length;
         if (quotes.length) {
             const gainers = quotes.filter(quote => quote.change > 0).length;
             const losers = quotes.filter(quote => quote.change < 0).length;
             $("dailyBriefSummary").textContent = "Estimated change since the previous close: " + gainers +
                 " tracked companies are up and " + losers + " are down. This limited company sample is not a broad market index.";
             const movers = $("dailyBriefMovers");
-            const selected = [...quotes.slice(0, 3), ...quotes.slice(-Math.min(3, quotes.length)).reverse()].slice(0, 6);
+            const selected = [...new Set([...quotes.slice(0, 3), ...quotes.slice(-3).reverse()])];
             for (const quote of selected) {
                 const formatQuoteMoney = amount => {
                     try {
@@ -1766,7 +1777,8 @@ async function openDailyBriefing() {
     }
     if (newsResult.status === "fulfilled") {
         const data = newsResult.value;
-        const articles = Array.isArray(data.articles) ? data.articles.slice(0, 5) : [];
+        const articles = data.articles.filter(article => article && typeof article.title === "string").slice(0, 5);
+        headlineCount = articles.length;
         const news = $("dailyBriefNews");
         for (const article of articles) {
             const title = document.createElement("strong");
@@ -1795,20 +1807,16 @@ async function openDailyBriefing() {
     $("dailyBriefSources").textContent = sources.length
         ? "Sources: " + [...new Set(sources)].join(" · ") + ". Quotes may be delayed; this is not investment advice."
         : "No providers responded. No current market facts are shown.";
-    const quoteCount = quotesResult.status === "fulfilled" && Array.isArray(quotesResult.value.quotes)
-        ? quotesResult.value.quotes.length : 0;
-    const headlineCount = newsResult.status === "fulfilled" && Array.isArray(newsResult.value.articles)
-        ? newsResult.value.articles.length : 0;
     $("dailyBriefStatus").textContent = [
         quoteCount ? `Quotes: ${quoteCount} tracked symbols returned; provider data may be delayed.` : "Quotes: unavailable.",
         newsResult.status === "fulfilled" ? `Headlines: ${headlineCount} returned.` : "Headlines: unavailable."
     ].join(" ");
-    modal.querySelector(".close")?.focus();
 }
 
 function closeDailyBriefing() {
     const modal = $("dailyBriefModal");
     if (!modal) return;
+    ++dailyBriefRequest;
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
     document.querySelector('[onclick="openDailyBriefing()"]')?.focus();
