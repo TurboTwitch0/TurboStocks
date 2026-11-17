@@ -2030,6 +2030,11 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 /* Search stays within short viewports and the visible mobile keyboard area. */
 .global-search { min-width: 0; }
 .global-search input { font-size: 16px; min-width: 0; }
+.global-search input { padding-right: 48px; }
+.search-clear { position: absolute; right: 2px; top: 0; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 24px; border-radius: 10px; }
+.search-clear[hidden] { display: none; }
+.search-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+body.dialog-open { overflow: hidden; }
 .search-results { z-index: 140; max-height: var(--search-height, min(55dvh, 440px)); overflow-y: auto; overscroll-behavior: contain; }
 .search-results .search-result { display: block; width: 100%; min-width: 0; min-height: 44px; margin: 0; text-align: left; white-space: normal; overflow-wrap: anywhere; color: var(--text); background: var(--panel); border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
 .search-results button:hover,.search-results button:focus-visible { background: var(--panel2); outline: 2px solid var(--accent); outline-offset: -2px; }

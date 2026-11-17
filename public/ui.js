@@ -357,18 +357,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if(trigger)trigger.setAttribute("aria-expanded",trigger.getAttribute("aria-expanded")==="true"?"false":"true");
     });
     document.addEventListener("keydown", event => {
-        if(event.key!=="Escape")return;
+        if(event.key!=="Escape" || document.querySelector(".modal.open"))return;
         const open=document.querySelector(".help-trigger[aria-expanded='true']");
         if(open){open.setAttribute("aria-expanded","false");open.focus();}
     });
-    const previousFocus = new Map();
-    for (const modal of document.querySelectorAll(".modal")) new MutationObserver(() => {
-        if (modal.classList.contains("open")) { previousFocus.set(modal, document.activeElement); modal.querySelector("input:not([hidden]),button")?.focus(); }
-        else previousFocus.get(modal)?.focus();
-    }).observe(modal, { attributes: true, attributeFilter: ["class"] });
     document.addEventListener("keydown", event => {
         const modal = [...document.querySelectorAll(".modal.open")].at(-1); if (!modal) return;
-        if (event.key === "Escape") { closeAuth(); closeLesson(); return; }
+        if (event.key === "Escape") {
+            const close = { authModal: closeAuth, lessonModal: closeLesson, dailyBriefModal: closeDailyBriefing }[modal.id];
+            if (close) { event.preventDefault(); close(); }
+            return;
+        }
         if (event.key === "Tab") {
             const nodes = [...modal.querySelectorAll("button,input,a[href],textarea,select")].filter(el => !el.hidden && !el.disabled && el.getClientRects().length);
             const first = nodes[0], last = nodes.at(-1); if (!first) return;
@@ -398,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const results = document.getElementById("searchResults");
     const container = input?.closest(".global-search");
     if (!container || !results) return;
-    const close = () => { results.style.display = "none"; };
+    const close = closeGlobalSearch;
     window.fitSearchResults = () => {
         const viewport = window.visualViewport;
         const bottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
@@ -414,6 +413,12 @@ document.addEventListener("DOMContentLoaded", () => {
     container.addEventListener("focusout", event => { if (!container.contains(event.relatedTarget)) close(); });
     container.addEventListener("keydown", event => {
         if (event.key === "Escape") { input.focus(); close(); return; }
+        if (event.key === "Enter" && event.target === input && !event.isComposing) {
+            event.preventDefault();
+            globalSearch();
+            runSearchResult(0);
+            return;
+        }
         if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
         event.preventDefault();
         if (results.style.display !== "block") globalSearch();

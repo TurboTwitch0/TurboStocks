@@ -39,11 +39,14 @@
 
         <input
             id="globalSearch" aria-label="Search stocks, lessons and tools"
+            aria-controls="searchResults" aria-describedby="searchStatus" autocomplete="off" enterkeyhint="go"
             placeholder="Search stocks, lessons, tools..."
             oninput="globalSearch()"
         >
 
-        <div id="searchResults" class="search-results"></div>
+        <button id="clearSearch" class="search-clear" type="button" aria-label="Clear search" onclick="clearGlobalSearch()" hidden>×</button>
+        <div id="searchResults" class="search-results" role="group" aria-label="Search results" aria-hidden="true"></div>
+        <p id="searchStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
     </div>
 
     <nav id="mainNav" aria-label="Main">

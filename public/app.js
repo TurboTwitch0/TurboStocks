@@ -1668,15 +1668,41 @@ function loadNewsWidget(force = false) {
 }
 
 
+/* Capture focus before opening so dialogs can restore their actual opener. */
+const dialogOpeners = new Map();
+function showDialog(id) {
+    const modal = $(id);
+    if (!modal) return;
+    const alreadyOpen = modal.classList.contains("open");
+    if (!alreadyOpen) dialogOpeners.set(id, document.activeElement);
+    modal.classList.add("open");
+    modal.style.display = "flex";
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("dialog-open");
+    if (!alreadyOpen) modal.querySelector("input:not([hidden]),button")?.focus();
+}
+
+function hideDialog(id) {
+    const modal = $(id);
+    if (!modal?.classList.contains("open")) return;
+    modal.classList.remove("open");
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+    const otherDialog = document.querySelector(".modal.open");
+    document.body.classList.toggle("dialog-open", !!otherDialog);
+    const opener = dialogOpeners.get(id);
+    dialogOpeners.delete(id);
+    if (opener && opener.isConnected !== false && opener.getClientRects().length) opener.focus();
+    else if (!otherDialog) $("main-content")?.focus({ preventScroll: true });
+}
+
 /* Show current provider data separately from the simulator's fixed sample prices. */
 let dailyBriefRequest = 0;
 async function openDailyBriefing() {
     const modal = $("dailyBriefModal");
     if (!modal) return;
     const request = ++dailyBriefRequest;
-    modal.classList.add("open");
-    modal.setAttribute("aria-hidden", "false");
-    modal.querySelector(".close")?.focus();
+    showDialog("dailyBriefModal");
     $("dailyBriefDate").textContent = new Date().toLocaleDateString(undefined, {
         weekday: "long", year: "numeric", month: "long", day: "numeric"
     });
@@ -1817,9 +1843,7 @@ function closeDailyBriefing() {
     const modal = $("dailyBriefModal");
     if (!modal) return;
     ++dailyBriefRequest;
-    modal.classList.remove("open");
-    modal.setAttribute("aria-hidden", "true");
-    document.querySelector('[onclick="openDailyBriefing()"]')?.focus();
+    hideDialog("dailyBriefModal");
 }
 window.openDailyBriefing = openDailyBriefing;
 window.closeDailyBriefing = closeDailyBriefing;
@@ -2390,20 +2414,13 @@ function openLesson(id) {
         `;
 
 
-    $("lessonModal").classList.add("open");
-    $("lessonModal")
-        .style.display =
-        "flex";
+    showDialog("lessonModal");
 
 }
 
 
 function closeLesson(){
-    $("lessonModal").classList.remove("open");
-
-    $("lessonModal")
-        .style.display =
-        "none";
+    hideDialog("lessonModal");
 
     selectedLesson = null;
 
@@ -3186,6 +3203,20 @@ function formatAI(text) {
    GLOBAL SEARCH
 ========================================================= */
 
+function closeGlobalSearch() {
+    const results = $("searchResults");
+    if (!results) return;
+    results.style.display = "none";
+    results.setAttribute("aria-hidden", "true");
+}
+
+function clearGlobalSearch() {
+    if (!$("globalSearch")) return;
+    $("globalSearch").value = "";
+    globalSearch();
+    $("globalSearch").focus();
+}
+
 function globalSearch() {
 
     const input = $("globalSearch");
@@ -3200,10 +3231,12 @@ function globalSearch() {
             .toLowerCase();
 
 
+    if ($("clearSearch")) $("clearSearch").hidden = !input.value;
     if (!query) {
 
         resultsBox.replaceChildren();
-        resultsBox.style.display = "none";
+        closeGlobalSearch();
+        if ($("searchStatus")) $("searchStatus").textContent = "";
         window.searchResultActions = [];
 
         return;
@@ -3235,14 +3268,7 @@ function globalSearch() {
 
     const lessonResults =
         lessons
-            .filter(lesson =>
-                lesson.title
-                    .toLowerCase()
-                    .includes(query) ||
-                lesson.category
-                    .toLowerCase()
-                    .includes(query)
-            )
+            .filter(lesson => `${lesson.title} ${lesson.category} ${lesson.description}`.toLowerCase().includes(query))
             .map(lesson => ({
                 type: "lesson",
                 title:
@@ -3315,7 +3341,7 @@ function globalSearch() {
         resultsBox.innerHTML =
             `
                 <div class="search-result">
-                    No results
+                    No results. Try a company symbol, lesson topic, or page name.
                 </div>
             `;
 
@@ -3348,8 +3374,11 @@ function globalSearch() {
         );
 
 
-    resultsBox.style.display =
-        "block";
+    resultsBox.style.display = "block";
+    resultsBox.setAttribute("aria-hidden", "false");
+    if ($("searchStatus")) $("searchStatus").textContent = results.length
+        ? `${results.length} result${results.length === 1 ? "" : "s"}. Use arrow keys to browse or press Enter to open the first result.`
+        : "No results. Try a company symbol, lesson topic, or page name.";
     window.fitSearchResults?.();
 
 }
@@ -3363,16 +3392,10 @@ function runSearchResult(index) {
         ];
 
 
-    if (action) {
-
-        action();
-
-    }
-
-
-    $("searchResults")
-        .style.display =
-        "none";
+    if (typeof action !== "function") return;
+    closeGlobalSearch();
+    action();
+    if (!document.querySelector(".modal.open")) $("main-content")?.focus({ preventScroll: true });
 
 }
 
@@ -3427,8 +3450,7 @@ function openAuth() {
 
     closeProfileMenu();
     setAuthMode(authMode || "signin");
-    $("authModal").classList.add("open");
-    $("authModal").style.display = "flex";
+    showDialog("authModal");
     showAuthError("");
 
     if (profile) {
@@ -3441,8 +3463,7 @@ function openAuth() {
 
 function closeAuth() {
 
-    $("authModal").classList.remove("open");
-    $("authModal").style.display = "none";
+    hideDialog("authModal");
     $("profilePassword").value = "";
     $("profilePassword2").value = "";
     setAuthPasswordVisibility("profilePassword", false);
@@ -4234,10 +4255,7 @@ document.addEventListener(
         });
 
         document.addEventListener("keydown", event => {
-            if (event.key === "Escape" && $("dailyBriefModal")?.classList.contains("open")) {
-                closeDailyBriefing();
-                return;
-            }
+            if (document.querySelector(".modal.open")) return;
             if(event.key === "Escape" && !$("mobileMoreMenu")?.hidden) {
                 toggleMobileMore(false);
                 $("mobileMoreButton")?.focus();

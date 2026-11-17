@@ -1,4 +1,14 @@
-# Release 1.5.4 Vercel and GitHub deployment readiness
+# Turbo Stocks changes and verification
+
+## Search and dialog improvements — November 16, 2026
+
+- Started from GitHub main `2d0dfb8`, preserving v0's current briefing/retry handling and canonical-path offline cache repair. No dependencies, storage schema, paper-trading arithmetic, lesson IDs, or authentication behavior were changed.
+- Added a 44-pixel search-clear button, result-count announcements, useful empty-result help, lesson-description matching, and Enter-to-open. Stock/page results move focus into the destination; lesson results retain dialog focus.
+- Replaced delayed modal focus observers with synchronous opener capture. Escape closes only the active dialog, returns focus, and preserves unrelated dialogs; body scrolling pauses until dialogs close. Existing Tab wrapping remains.
+- Changed only the PWA shell cache name so the new shell has a separate cache. API/external-data bypass and v0's current-cache/canonical-path fallback remain intact.
+- Verification: `npm ci` installed 74 packages and reported **0 audit findings**. `npm run check` passed; `npm test` passed **70 tests, 0 failures**, including added search/focus/dialog cases and existing trading, storage-failure, profile-isolation, backup, provider-failure and PWA simulations. Frontend tests use a simulated DOM; PWA tests use a simulated worker.
+- Separate rendered Chrome checks at localhost:3103: stock Enter navigation → Markets with main-content focus; arrow-key lesson selection → Stocks 101; Shift+Tab wraps to Submit Quiz; Escape closes the lesson; daily-update unavailable-data display; return to its actual opener; clear-search query/focus reset; sign-in dialog Escape/focus recovery. The 390 × 844 viewport showed contained search results with a 44-pixel clear button. Screenshot: `TurboStocks-mobile-search-2026-11-16.jpg` in workspace outputs.
+- The local browser check used `LIVE_DATA=false`. Live-provider responses, physical phones/tablets, screen-reader speech, installed PWA offline/update lifecycle, model inference, and OCR downloads were not tested in this pass. No hosting project was created or manually deployed; publication is through the existing GitHub repository.
 
 ## Compatible dependency patches — October 28, 2026
 - Updated only the locked transitive packages `body-parser` 1.20.8 → 1.20.9 and `qs` 6.16.0 → 6.16.2 within the existing dependency constraints. These resolve the [body-parser advisory](https://github.com/advisories/GHSA-27r3-jxmh-p828) and [qs advisory](https://github.com/advisories/GHSA-6pq8-jhm2-2vcw). No dependency was added and the application version remains 1.6.1.

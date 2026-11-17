@@ -286,6 +286,51 @@ test('watchlist can sort without changing its saved symbol order',()=>{
     assert.ok(h.element('homeWatchlist').innerHTML.indexOf('TSLA')<h.element('homeWatchlist').innerHTML.indexOf('NVDA'));
 });
 
+test('search finds lesson descriptions, announces empty results, clears and focuses destinations',()=>{
+    const h=harness(new Map(),{boot:true});
+    h.element('globalSearch').value='aapl';h.run('globalSearch()');
+    assert.match(h.element('searchStatus').textContent,/1 result/);
+    assert.equal(h.element('searchResults').getAttribute('aria-hidden'),'false');
+    h.run('runSearchResult(0)');
+    assert.equal(h.element('markets-page').classList.contains('active'),true);
+    assert.equal(h.context.document.activeElement,h.element('main-content'));
+    assert.equal(h.element('searchResults').getAttribute('aria-hidden'),'true');
+    // The query below is selected from a description, independent of lesson titles.
+    h.run('document.getElementById("globalSearch").value=lessons[0].description;globalSearch()');
+    assert.ok(h.run('searchResultActions.length')>0);
+    h.element('globalSearch').value='no-such-topic-12345';h.run('globalSearch()');
+    assert.match(h.element('searchStatus').textContent,/No results/);
+    assert.equal(h.run('searchResultActions.length'),0);
+    h.run('clearGlobalSearch()');
+    assert.equal(h.element('globalSearch').value,'');
+    assert.equal(h.element('clearSearch').hidden,true);
+    assert.equal(h.context.document.activeElement,h.element('globalSearch'));
+    assert.equal(h.element('searchResults').style.display,'none');
+});
+
+test('dialog Escape closes only the active dialog and restores its opener',async()=>{
+    const h=harness(new Map(),{boot:true});
+    const opener=h.element('profileButton');opener.focus();h.run('openAuth()');
+    assert.equal(h.element('authModal').getAttribute('aria-hidden'),'false');
+    assert.equal(h.context.document.body.classList.contains('dialog-open'),true);
+    h.element('profilePassword').value='untouched';
+    h.run('openLesson("stocks101")');
+    const escape=()=>{let prevented=false;for(const fn of h.events.get('keydown'))fn({key:'Escape',preventDefault(){prevented=true;}});return prevented;};
+    assert.equal(escape(),true);
+    assert.equal(h.element('lessonModal').classList.contains('open'),false);
+    assert.equal(h.element('authModal').classList.contains('open'),true);
+    assert.equal(h.element('profilePassword').value,'untouched');
+    assert.equal(h.context.document.body.classList.contains('dialog-open'),true);
+    assert.equal(escape(),true);
+    assert.equal(h.context.document.activeElement,opener);
+    assert.equal(h.context.document.body.classList.contains('dialog-open'),false);
+    assert.equal(h.element('authModal').getAttribute('aria-hidden'),'true');
+    opener.focus();await h.run('openDailyBriefing()');
+    assert.equal(escape(),true);
+    assert.equal(h.element('dailyBriefModal').classList.contains('open'),false);
+    assert.equal(h.context.document.activeElement,opener);
+});
+
 test('trade history filters by symbol, side and inclusive date range, and clears',()=>{
     const h=harness(new Map(),{boot:true});
     h.run('account.history=[{symbol:"AAPL",side:"BUY",shares:1,price:250,total:250,timestamp:"2026-04-03T18:00:00.000Z"},{symbol:"AAPL",side:"SELL",shares:1,price:255,total:255,timestamp:"2026-04-03T19:00:00.000Z"},{symbol:"NVDA",side:"BUY",shares:1,price:140,total:140,timestamp:"2026-04-02T18:00:00.000Z"}];renderTradeHistory()');
