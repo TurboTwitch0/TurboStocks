@@ -3,7 +3,6 @@
 const BACKUP_VERSION = 1;
 const BACKUP_LIMIT = 10 * 1024 * 1024;
 const IMPORT_LOCK_KEY = "__turboStocksBackupImport";
-const IMPORT_LOCK_NAME = "turbo-stocks-backup-import";
 const BACKUP_KEYS = new Set([
     "novaUsers", "novaSession", "novaGuestAccount", "novaGuestLessons",
     "novaAccount", "novaLessonProgress", "novaProfile", "novaTheme",
@@ -187,6 +186,15 @@ function downloadJSON(payload, filename) {
 }
 
 function exportLocalBackup() {
+    const exportSnapshot = () => exportLocalBackupNow();
+    if (!navigator.locks?.request) return exportSnapshot();
+    return withAppDataLock(exportSnapshot, {scope:"none",onError:()=>{
+        reportStorage("A coordinated export is unavailable. This read-only backup captures the available saved values; close other editing tabs before exporting again.");
+        exportSnapshot();
+    }});
+}
+
+function exportLocalBackupNow() {
     try {
         const data = snapshotAppData();
         const serialized = JSON.stringify(backupPayload(data), null, 2);
@@ -214,16 +222,10 @@ function acquireImportLock() {
 }
 
 async function exclusiveImport(callback) {
-    if (navigator.locks?.request) {
-        return navigator.locks.request(IMPORT_LOCK_NAME, { mode: "exclusive", ifAvailable: true }, lock => {
-            if (!lock) throw new Error("A backup import is already active in another tab.");
-            return callback();
-        });
-    }
-    return callback();
+    return withAppDataLock(callback, {scope:"workspace",ifAvailable:true,onError:error=>{throw error;}});
 }
 
-function statusText(node, message) { if (node) { node.textContent = message; node.replaceChildren?.(); } }
+function statusText(node, message) { if (node) { node.replaceChildren?.(); node.textContent = message; } }
 
 function restoreSnapshot(previous, imported) {
     const keys = new Set([...Object.keys(previous), ...Object.keys(imported)]), failures = [];
@@ -260,11 +262,10 @@ function changedCategories(keys) {
     return categories.length ? categories.join(", ") : "saved app data";
 }
 
-async function performImport(input, status) {
+async function performImport(input, status, file = input.files?.[0]) {
     const token = acquireImportLock();
     let completed = false, refresh = false;
     try {
-        const file = input.files?.[0];
         if (!file) return false;
         if (!Number.isFinite(file.size) || file.size > BACKUP_LIMIT) throw new Error("Choose a backup file no larger than 10 MB.");
         const text = await file.text();
@@ -307,10 +308,10 @@ async function performImport(input, status) {
 
 async function importLocalBackup(input) {
     const status = document.getElementById("backupStatus");
+    const file = input.files?.[0];
     try {
-        const run = () => performImport(input, status);
-        if (navigator.locks?.request) await exclusiveImport(run);
-        else await run();
+        const run = () => performImport(input, status, file);
+        await exclusiveImport(run);
     } catch (error) { statusText(status, `Import failed: ${error.message || "Check the file and browser storage."}`); }
     finally { if (input) input.value = ""; }
 }

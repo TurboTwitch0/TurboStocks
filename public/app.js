@@ -1,6 +1,12 @@
 "use strict";
 
 const BACKUP_IMPORT_LOCK_KEY = "__turboStocksBackupImport";
+const APP_DATA_LOCK_NAME = "turbo-stocks-browser-data";
+const SAFE_SAVE_UNAVAILABLE = "Safe saving is unavailable in this browser. Open Turbo Stocks on HTTPS in a current browser to edit or import data. Your saved data is still readable and exportable.";
+let appDataLockHeld = false;
+let activeAppDataContext = null;
+let legacyMigrationPending = false;
+let legacySessionEmail = null;
 
 /* =========================================================
    CONFIG
@@ -131,6 +137,7 @@ let savedSnapshot = null;
 let generationEpoch = 0;
 
 let chatHistory = [];
+let tutorHistorySnapshot = null;
 
 let activeTutorQuiz = null;
 
@@ -197,13 +204,47 @@ function reportStorage(message) {
     const status = $("storageStatus");
     if (status) {status.hidden=false;status.textContent=message;}
 }
+function assertAppDataContext(expected) {
+    if (!expected) return;
+    const session = getLocal("novaSession"), users = loadUsers();
+    const activeEmail = session && Object.hasOwn(users, session) ? session : null;
+    if (expected.email !== (profile?.email || null) || expected.email !== activeEmail ||
+        (expected.snapshot !== undefined && (savedSnapshot !== expected.snapshot || persistedSignature() !== expected.snapshot)) ||
+        expected.keys.some(([key, value]) => getLocal(key) !== value)) {
+        throw new Error("Saved progress changed while this action was waiting. Refresh this tab, review the current profile and progress, then try again.");
+    }
+}
+function withAppDataLock(action, { scope = "account", keys = [], ifAvailable = false, onError = error => reportStorage(error.message || "Could not safely save this change.") } = {}) {
+    const expected = scope === "none" ? null : {
+        email: profile?.email || null,
+        ...(scope === "account" ? { snapshot: savedSnapshot } : {}),
+        keys: keys.map(key => Array.isArray(key) ? key : [key, getLocal(key)])
+    };
+    const fail = error => { onError(error); return false; };
+    if (!navigator.locks?.request) return Promise.resolve(fail(new Error(SAFE_SAVE_UNAVAILABLE)));
+    try {
+        return Promise.resolve(navigator.locks.request(APP_DATA_LOCK_NAME, { mode: "exclusive", ifAvailable }, lock => {
+            if (!lock) throw new Error("Another tab is updating Turbo Stocks data. Wait for it to finish, then try again.");
+            assertAppDataContext(expected);
+            appDataLockHeld = true;
+            activeAppDataContext = expected;
+            const release = () => { appDataLockHeld = false; activeAppDataContext = null; };
+            try {
+                const result = action();
+                if (result?.then) return Promise.resolve(result).finally(release);
+                release();
+                return result;
+            } catch (error) { release(); throw error; }
+        })).catch(error => fail(error?.name === "SecurityError" || error?.name === "NotAllowedError" ? new Error(SAFE_SAVE_UNAVAILABLE) : error));
+    } catch (error) { return Promise.resolve(fail(error?.name === "SecurityError" || error?.name === "NotAllowedError" ? new Error(SAFE_SAVE_UNAVAILABLE) : error)); }
+}
 function backupImportIsActive() {
     let raw;
     try { raw=localStorage.getItem(BACKUP_IMPORT_LOCK_KEY); } catch { return false; }
     if(!raw)return false;
     try {
         const lock=JSON.parse(raw);
-        if(Number.isFinite(lock.expiresAt) && lock.expiresAt<=Date.now()) {localStorage.removeItem(BACKUP_IMPORT_LOCK_KEY);return false;}
+        if(Number.isFinite(lock.expiresAt) && lock.expiresAt<=Date.now()) return false;
     } catch { /* Treat a damaged lock as active to avoid overwriting a partial import. */ }
     return true;
 }
@@ -216,11 +257,13 @@ function getLocal(key) {
 }
 function setLocal(key,value) {
     assertBackupImportIdle();
+    if (activeAppDataContext?.snapshot !== undefined) assertAppDataContext(activeAppDataContext);
     try {localStorage.setItem(key,value);}
     catch {storageUnavailable=true;reportStorage("Could not save progress. Browser storage is blocked or full.");throw new Error("Browser storage is blocked or full. Progress was not saved.");}
 }
 function removeLocal(key) {
     assertBackupImportIdle();
+    if (activeAppDataContext?.snapshot !== undefined) assertAppDataContext(activeAppDataContext);
     try {localStorage.removeItem(key);}
     catch {storageUnavailable=true;reportStorage("Could not remove saved data. Allow browser storage and try again.");throw new Error("Browser storage is unavailable.");}
 }
@@ -300,6 +343,7 @@ function saveUsers(users) {
 function migrateLegacyUser() {
 
     const users = loadUsers();
+    legacySessionEmail = null;
 
     let legacyProfile = null;
     let legacyAccount = null;
@@ -324,7 +368,8 @@ function migrateLegacyUser() {
         const email = String(legacyProfile.email).trim().toLowerCase();
 
         if (!users[email]) {
-            users[email] = {
+            legacySessionEmail = email;
+            const legacyUser = {
                 name: typeof legacyProfile.name === "string" ? legacyProfile.name.slice(0,80) : "Student",
                 email,
                 passwordHash: null,
@@ -332,6 +377,17 @@ function migrateLegacyUser() {
                 lessonProgress: legacyProgress || {},
                 createdAt: legacyProfile.signedInAt || new Date().toISOString()
             };
+            if (!appDataLockHeld) {
+                if (!legacyMigrationPending) {
+                    legacyMigrationPending = true;
+                    Promise.resolve().then(() => withAppDataLock(() => {
+                        migrateLegacyUser();
+                        refreshWorkspaceFromStorage();
+                    }, { scope: "none" })).finally(() => { legacyMigrationPending = false; });
+                }
+                return {...users,[email]:legacyUser};
+            }
+            users[email] = legacyUser;
 
             try {
                 saveUsers(users);
@@ -351,7 +407,7 @@ function migrateLegacyUser() {
 
 function restoreSession() {
     portfolioRecovery=false;
-    const users=migrateLegacyUser();const email=getLocal("novaSession");
+    const users=migrateLegacyUser();const email=getLocal("novaSession") || legacySessionEmail;
     const user=email && Object.hasOwn(users,email)?users[email]:null;
     if(user){profile={name:user.name.slice(0,80),email:user.email,signedInAt:user.createdAt};account=restoreAccount(user.account);lessonProgress=restoreProgress(user.lessonProgress);}
     else{profile=null;const guest=guestState();account=restoreAccount(guest.account);lessonProgress=restoreProgress(guest.lessonProgress);}
@@ -882,6 +938,7 @@ function escapeHTML(value) {
 
 
 function saveEverything() {
+    if (activeAppDataContext?.snapshot !== undefined) assertAppDataContext(activeAppDataContext);
     if(portfolioRecovery)throw new Error("Saved portfolio is damaged. Export a backup, then explicitly reset it.");
     const activeEmail=getLocal("novaSession"),users=loadUsers();
     const validSession=activeEmail && Object.hasOwn(users,activeEmail)?activeEmail:null;
@@ -1094,6 +1151,11 @@ function getPortfolioValue() {
 ========================================================= */
 
 function toggleWatchlist(symbol) {
+    if (!Object.hasOwn(stocks, symbol)) return Promise.resolve(false);
+    return withAppDataLock(() => toggleWatchlistNow(symbol));
+}
+
+function toggleWatchlistNow(symbol) {
 
     if(!Object.hasOwn(stocks,symbol))return;
     const previousAccount=account;account={...account,watchlist:[...account.watchlist]};
@@ -2014,14 +2076,28 @@ function submitPaperOrder(event) {
     const symbol = $("orderSymbol").value;
     const side = $("orderSide").value;
     const shares = Number($("orderShares").value);
-    placePaperOrder(symbol,side,shares);
+    return placePaperOrder(symbol,side,shares);
 }
 
 function placePaperOrder(symbol,side,shares) {
-    if(paperOrderPending)return;
+    if(paperOrderPending)return Promise.resolve(false);
     paperOrderPending=true;
     const submit=$("paperOrderForm")?.querySelector('button[type="submit"]');
     if(submit){submit.disabled=true;submit.textContent="Reviewing order…";}
+    $("orderStatus").textContent=`Waiting to safely review ${side} ${shares} ${symbol}…`;
+    return withAppDataLock(() => placePaperOrderNow(symbol,side,shares), { onError: error => {
+        $("orderStatus").textContent=`Order not placed: ${error.message || "Could not safely save this order."}`;
+        finishPaperOrder();
+    } });
+}
+
+function finishPaperOrder() {
+    paperOrderPending=false;
+    const submit=$("paperOrderForm")?.querySelector('button[type="submit"]');
+    if(submit){submit.disabled=false;submit.textContent="Review order";}
+}
+
+function placePaperOrderNow(symbol,side,shares) {
     const price = stocks[symbol]?.price;
     const status = $("orderStatus");
 
@@ -2032,6 +2108,7 @@ function placePaperOrder(symbol,side,shares) {
         const buyingPower=side==="BUY"?account.cash-total:account.cash+total;
         const estimatedPnl=side==="SELL"?shares*(price-(position?.averagePrice||price)):0;
         if (!window.confirm(`Order preview\n${side} ${shares} ${symbol}\nSample price: ${money(price)}\nEstimated ${side==="BUY"?"cost":"proceeds"}: ${money(total)}\nBuying power after: ${money(buyingPower)}${side==="SELL"?`\nEstimated realized P/L: ${money(estimatedPnl)}`:""}\nNo fees. Simulated money only. Confirm?`)) {
+            status.textContent="Order cancelled. No paper trade was saved.";
             return;
         }
 
@@ -2052,8 +2129,7 @@ function placePaperOrder(symbol,side,shares) {
     } catch (error) {
         status.textContent = error.message;
     } finally {
-        paperOrderPending=false;
-        if(submit){submit.disabled=false;submit.textContent="Review order";}
+        finishPaperOrder();
     }
 
 }
@@ -2061,11 +2137,17 @@ function placePaperOrder(symbol,side,shares) {
 function closePosition(symbol) {
     const position=account.positions[symbol];
     if(!position)return;
-    placePaperOrder(symbol,"SELL",position.shares);
+    return placePaperOrder(symbol,"SELL",position.shares);
 }
 
 
 function resetPaperAccount() {
+    return withAppDataLock(resetPaperAccountNow, { onError: error => {
+        $("orderStatus").textContent=`Account not reset: ${error.message || "Could not safely save the reset."}`;
+    } });
+}
+
+function resetPaperAccountNow() {
 
     if (!window.confirm("Reset this profile's paper cash, positions, trades and watchlist? Lessons are retained.")) {
         return;
@@ -2428,27 +2510,34 @@ function closeLesson(){
 
 
 function submitQuiz() {
+    const lesson = selectedLesson;
+    if (!lesson) return Promise.resolve(false);
+    const answers = lesson.quiz.map((_, index) => document.querySelector(`input[name="quiz${index}"]:checked`)?.value);
+    return withAppDataLock(() => submitQuizNow(lesson, answers), { onError: error => {
+        if (selectedLesson?.id === lesson.id) $("quizResult").textContent=error.message;
+        else reportStorage(error.message);
+    } });
+}
 
-    if (!selectedLesson) return;
+function submitQuizNow(lesson, answers) {
+
+    if (!lesson) return;
 
 
     let score = 0;
 
 
-    selectedLesson.quiz
+    lesson.quiz
         .forEach(
             (question,index) => {
 
-                const selected =
-                    document.querySelector(
-                        `input[name="quiz${index}"]:checked`
-                    );
+                const selected = answers[index];
 
 
                 if (
-                    selected &&
+                    selected !== undefined &&
                     Number(
-                        selected.value
+                        selected
                     ) ===
                     question.answer
                 ) {
@@ -2462,7 +2551,7 @@ function submitQuiz() {
 
 
     const total =
-        selectedLesson.quiz.length;
+        lesson.quiz.length;
 
 
     const percent =
@@ -2479,11 +2568,11 @@ function submitQuiz() {
 
     const previousProgress=lessonProgress;lessonProgress={...lessonProgress};
     lessonProgress[
-        selectedLesson.id
+        lesson.id
     ] = {
 
         completed:
-            passed || previousProgress[selectedLesson.id]?.completed===true,
+            passed || previousProgress[lesson.id]?.completed===true,
 
         score,
 
@@ -2505,12 +2594,13 @@ function submitQuiz() {
     renderLessons();
 
 
-    const feedback=selectedLesson.quiz.map((question,index)=>{
-        const chosen=document.querySelector(`input[name="quiz${index}"]:checked`);
+    if (selectedLesson?.id !== lesson.id) return;
+    const feedback=lesson.quiz.map((question,index)=>{
+        const chosen=answers[index];
         const correct=question.choices[question.answer];
-        const lessonText=selectedLesson.body.replace(/<[^>]*>/g," ").replace(/&[^;]+;/g," ").replace(/\s+/g," ").trim();
-        const explanation=question.explanation||lessonDetails[selectedLesson.id]?.explanation||lessonText.slice(0,280)||selectedLesson.description;
-        return `<li><strong>${escapeHTML(question.question)}</strong><br>${chosen&&Number(chosen.value)===question.answer?"Correct.":`Correct answer: ${escapeHTML(correct)}.`} ${escapeHTML(explanation)}</li>`;
+        const lessonText=lesson.body.replace(/<[^>]*>/g," ").replace(/&[^;]+;/g," ").replace(/\s+/g," ").trim();
+        const explanation=question.explanation||lessonDetails[lesson.id]?.explanation||lessonText.slice(0,280)||lesson.description;
+        return `<li><strong>${escapeHTML(question.question)}</strong><br>${chosen!==undefined&&Number(chosen)===question.answer?"Correct.":`Correct answer: ${escapeHTML(correct)}.`} ${escapeHTML(explanation)}</li>`;
     }).join("");
 
     $("quizResult")
@@ -2649,7 +2739,8 @@ async function sendAI(optionalMessage=null) {
     const cancelButton=$("aiCancel");if(cancelButton)cancelButton.hidden=false;
     let loading=null;
     try{
-        addChatMessage("user",message);chatHistory.push({role:"user",content:message});chatHistory=chatHistory.slice(-40);persistTutorHistory();input.value="";
+        addChatMessage("user",message);chatHistory.push({role:"user",content:message});chatHistory=chatHistory.slice(-40);await persistTutorHistory();input.value="";
+        if(epoch!==generationEpoch)return;
         const useGuide=shouldUseVerifiedGuide(message);
         const needsSearch=isCurrentInfoRequest(message);
         loading=addChatMessage("assistant",needsSearch?"Searching financial headlines...":localEngine && !useGuide?"Generating on your device...":"Checking the study guide...");
@@ -2664,7 +2755,7 @@ async function sendAI(optionalMessage=null) {
         if(epoch!==generationEpoch)return;
         if(needsSearch && !web.articles.length)answer=`No current news sources could be retrieved. This answer is general education, not a report of current events.\n\n${answer}`;
         loading.remove();loading=null;addChatMessage("assistant",answer,web.articles,mode);
-        chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-40);persistTutorHistory();
+        chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-40);await persistTutorHistory();
     }catch(error){
         if(epoch===generationEpoch)$("tutorStatus").textContent=`Tutor could not finish: ${String(error.message || error).slice(0,140)}. You can try again.`;
     }finally{if(loading)loading.remove();tutorIsGenerating=false;activeTutorAbortController=null;$("aiSend").disabled=false;if(cancelButton)cancelButton.hidden=true;}
@@ -3607,14 +3698,14 @@ function applyUser(user) {
     resetWorkspace();updateProfileButton();updateDashboard();renderPortfolio();renderLessons();updateLessonProgress();
 }
 
-async function submitAuthCore() {
+async function submitAuthCore(fields) {
 
-    const mode = authMode;
+    const mode = fields.mode;
     if(mode === "signup" && portfolioRecovery)throw new Error("Repair the damaged portfolio before copying it into a profile.");
-    const name = $("profileName").value.trim();
-    const email = $("profileEmail").value.trim().toLowerCase();
-    const password = $("profilePassword").value;
-    const confirm = $("profilePassword2").value;
+    const name = fields.name.trim();
+    const email = fields.email.trim().toLowerCase();
+    const password = fields.password;
+    const confirm = fields.confirm;
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
         showAuthError("Enter a valid email address.");
@@ -3707,6 +3798,10 @@ async function submitAuthCore() {
 async function submitAuth() {
 
     if (authPending) return;
+    const fields = {
+        mode: authMode, name: $("profileName").value, email: $("profileEmail").value,
+        password: $("profilePassword").value, confirm: $("profilePassword2").value
+    };
 
     const button = $("authSubmit");
     const submitLabel = button?.textContent || (authMode === "signup" ? "Create account" : "Sign in");
@@ -3714,7 +3809,7 @@ async function submitAuth() {
     if (button) {button.disabled = true;button.textContent = authMode === "signup" ? "Creating profile…" : "Signing in…";button.setAttribute("aria-busy", "true");}
 
     try {
-        await submitAuthCore();
+        await withAppDataLock(() => submitAuthCore(fields), { onError: error => showAuthError(error.message) });
     } catch (error) {
         showAuthError(error.message || "Could not save this profile. Check browser storage settings.");
     } finally {
@@ -3731,19 +3826,29 @@ function signInLocal() {
 
 
 function signOut() {
+    return withAppDataLock(signOutNow, { onError: error => reportStorage(`Sign out failed: ${error.message} Your profile is still active.`) });
+}
+
+function signOutNow() {
     try{removeLocal("novaSession");}catch(error){reportStorage(`Sign out failed: ${error.message || "browser storage is unavailable"}. Your profile is still active.`);return;}
     profile=null;portfolioRecovery=false;const guest=guestState();account=restoreAccount(guest.account);lessonProgress=restoreProgress(guest.lessonProgress);
     savedSnapshot=persistedSignature();resetWorkspace();updateProfileButton();updateDashboard();renderPortfolio();renderLessons();updateLessonProgress();closeProfileMenu();showPage("home");
 }
 
 function persistTutorHistory() {
-    if(!$("rememberTutorChat")?.checked)return;
-    try{setLocal(workspaceKey("turboTutorHistory"),JSON.stringify(chatHistory.slice(-40)));}catch{/* Chat persistence must not break the tutor. */}
+    if(!$("rememberTutorChat")?.checked)return Promise.resolve(false);
+    const key=workspaceKey("turboTutorHistory"), raw=JSON.stringify(chatHistory.slice(-40));
+    return withAppDataLock(() => {
+        setLocal(key,raw);
+        tutorHistorySnapshot=raw;
+    }, { scope:"workspace",keys:[[key,tutorHistorySnapshot]],ifAvailable:true,
+        onError:error=>reportStorage(`This chat remains in this tab, but could not be saved: ${error.message}`) });
 }
 
 function restoreTutorHistory() {
     const checkbox=$("rememberTutorChat");if(!checkbox)return;
     checkbox.checked=readWorkspace("turboRememberTutor",false)===true;chatHistory=[];
+    tutorHistorySnapshot=getLocal(workspaceKey("turboTutorHistory"));
     if(!checkbox.checked)return;
     const saved=readWorkspace("turboTutorHistory",[]);
     if(Array.isArray(saved))chatHistory=saved.filter(item=>validRecord(item) && ["user","assistant"].includes(item.role) && typeof item.content==="string").slice(-40).map(item=>({role:item.role,content:item.content.slice(0,12000)}));
@@ -3752,17 +3857,21 @@ function restoreTutorHistory() {
 
 function setTutorHistoryPreference() {
     const checkbox=$("rememberTutorChat");
-    try{
-        setLocal(workspaceKey("turboRememberTutor"),String(checkbox.checked));
-        if(checkbox.checked)persistTutorHistory();
-        else{removeLocal(workspaceKey("turboTutorHistory"));if(!profile)removeLocal("turboTutorHistory");}
-    }catch{checkbox.checked=false;}
+    const enabled=checkbox.checked,preferenceKey=workspaceKey("turboRememberTutor"),historyKey=workspaceKey("turboTutorHistory");
+    const raw=JSON.stringify(chatHistory.slice(-40));
+    return withAppDataLock(() => {
+        setLocal(preferenceKey,String(enabled));
+        if(enabled){setLocal(historyKey,raw);tutorHistorySnapshot=raw;}
+        else{removeLocal(historyKey);if(!profile)removeLocal("turboTutorHistory");tutorHistorySnapshot=null;}
+    }, {scope:"workspace",keys:[preferenceKey,historyKey],onError:error=>{
+        checkbox.checked=readWorkspace("turboRememberTutor",false)===true;
+        reportStorage(`Chat preference was not saved: ${error.message}`);
+    }});
 }
 
 function saveBeforeTabCloses() {
-    // Portfolio/lesson/note changes save immediately. Never overwrite newer state on pagehide.
-    const active=getLocal("novaSession");
-    if((profile?.email || null)===(active || null))persistTutorHistory();
+    // Edits and completed chat messages save immediately. An unloading stale tab
+    // must never replace a newer conversation or queue a last-minute write.
 }
 
 function queueTutorImage(input) {
@@ -4043,22 +4152,29 @@ function saveCommunityNote(event) {
     const claim = $("communityClaim").value.trim();
 
     if (!/^[A-Z][A-Z0-9.-]{0,7}$/.test(symbol) || !claim) return;
+    const draft={symbol,claim,source:$("communitySource").value,tone:$("communityTone").value};
+    return withAppDataLock(() => saveCommunityNoteNow(draft), {scope:"workspace"});
+}
+
+function saveCommunityNoteNow(draft) {
+    restoreCommunityNotes();
 
     const previousNotes=communityNotes;
     communityNotes=[...communityNotes];
     communityNotes.unshift({
         id: globalThis.crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        symbol,
-        source: $("communitySource").value,
-        tone: $("communityTone").value,
-        claim: claim.slice(0, 600),
+        symbol:draft.symbol,
+        source:draft.source,
+        tone:draft.tone,
+        claim:draft.claim.slice(0, 600),
         createdAt: new Date().toISOString()
     });
 
     communityNotes = communityNotes.slice(0, 80);
     try{setLocal(workspaceKey("turboCommunityNotes"),JSON.stringify(communityNotes));}
     catch{communityNotes=previousNotes;return;}
-    $("communityNoteForm").reset();
+    if($("communityClaimSymbol").value.trim().toUpperCase()===draft.symbol && $("communityClaim").value.trim()===draft.claim &&
+        $("communitySource").value===draft.source && $("communityTone").value===draft.tone) $("communityNoteForm").reset();
     renderCommunityNotes();
 
 }
@@ -4113,6 +4229,11 @@ function reviewCommunityNote(id) {
 
 
 function deleteCommunityNote(id) {
+    return withAppDataLock(() => deleteCommunityNoteNow(id), {scope:"workspace"});
+}
+
+function deleteCommunityNoteNow(id) {
+    restoreCommunityNotes();
 
     const previousNotes=communityNotes;
     communityNotes=communityNotes.filter(note=>note.id!==id);
@@ -4181,15 +4302,8 @@ function toggleTheme() {
 
     document.body.classList.toggle("light");
 
-    try {
-    setLocal(
-        "novaTheme",
-        document.body.classList.contains("light")
-            ? "light"
-            : "dark"
-    );
-
-    }catch{/* Theme still changes when storage is unavailable. */}
+    const theme=document.body.classList.contains("light")?"light":"dark";
+    const saving=withAppDataLock(() => setLocal("novaTheme",theme), {scope:"none",onError:error=>reportStorage(`Theme changed for this tab, but was not saved: ${error.message}`)});
 
     widgetsReady = {
         chart: "",
@@ -4211,6 +4325,7 @@ function toggleTheme() {
         loadNewsWidget(true);
     }
 
+    return saving;
 }
 
 
@@ -4236,6 +4351,7 @@ document.addEventListener(
         if ($("storageStatus")) {
             $("storageStatus").hidden = !(storageUnavailable || portfolioRecovery || usersRecovery);
         }
+        if (!navigator.locks?.request) reportStorage(SAFE_SAVE_UNAVAILABLE);
 
 
         const nav = $("mainNav");

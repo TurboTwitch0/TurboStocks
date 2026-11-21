@@ -162,6 +162,7 @@ test('malformed profile records cannot be silently discarded by subsequent write
 });
 test('profile switch discards pending tutor reply instead of saving it to another profile',async()=>{
     const h=harness();h.run('searchTutorWeb=()=>new Promise(resolve=>{finishNews=resolve});');const pending=h.run('sendAI("What happened in markets today?")');
+    await Promise.resolve();
     h.run('generationEpoch++;chatHistory=[];finishNews({articles:[],fetchedAt:""})');await pending;
     assert.equal(h.run('chatHistory.length'),0);assert.equal(h.element('aiSend').disabled,false);assert.equal(h.run('tutorIsGenerating'),false);
 });
