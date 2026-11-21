@@ -1,5 +1,10 @@
 # Turbo Stocks changes and verification
 
+## Preserve tutor drafts during delayed saves — November 21, 2026
+
+- A tutor send now checks its captured generation and profile after awaiting chat storage, before changing the main input. It clears only the unchanged main draft that was actually submitted. Optional-message and quick-tutor sends preserve the main draft, including edits made while they wait.
+- Added five delayed-save regressions for cancellation, profile changes, changed/unchanged main drafts, optional messages, and the quick tutor; all reproduced draft loss before the repair. Syntax checks and all **96 tests** passed. A focused Chromium flow with a controlled delay before the native Web Lock request passed six variants, including an actual second-tab profile signup, without runtime errors or external requests. No account/storage schema, lock-coordination, or deployment behavior changed in this follow-up.
+
 ## Preserve paper accounts across concurrent tabs — November 21, 2026
 
 - Started from GitHub main `0073041`, preserving the reviewed tutor/menu Escape priority and all earlier mobile/data repairs. No dependency, storage schema, backup format, paper-price arithmetic, holdings/lesson IDs, or account identity was replaced.

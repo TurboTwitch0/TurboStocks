@@ -2732,32 +2732,36 @@ async function enableLocalAI() {
 
 
 async function sendAI(optionalMessage=null) {
-    const input=$("aiInput"),message=String(optionalMessage || input.value || "").trim().slice(0,4000);
+    const input=$("aiInput"),submittedDraft=input.value,fromMainDraft=optionalMessage===null || optionalMessage===undefined;
+    const message=String(fromMainDraft?submittedDraft:optionalMessage).trim().slice(0,4000);
     if(!message || tutorIsGenerating)return;
-    const epoch=generationEpoch;tutorIsGenerating=true;$("aiSend").disabled=true;
+    const epoch=generationEpoch,actor=profile?.email || null;
+    const isCurrent=()=>epoch===generationEpoch && actor===(profile?.email || null);
+    tutorIsGenerating=true;$("aiSend").disabled=true;
     activeTutorAbortController=typeof AbortController==="function"?new AbortController():null;
     const cancelButton=$("aiCancel");if(cancelButton)cancelButton.hidden=false;
     let loading=null;
     try{
-        addChatMessage("user",message);chatHistory.push({role:"user",content:message});chatHistory=chatHistory.slice(-40);await persistTutorHistory();input.value="";
-        if(epoch!==generationEpoch)return;
+        addChatMessage("user",message);chatHistory.push({role:"user",content:message});chatHistory=chatHistory.slice(-40);await persistTutorHistory();
+        if(!isCurrent())return;
+        if(fromMainDraft && input.value===submittedDraft)input.value="";
         const useGuide=shouldUseVerifiedGuide(message);
         const needsSearch=isCurrentInfoRequest(message);
         loading=addChatMessage("assistant",needsSearch?"Searching financial headlines...":localEngine && !useGuide?"Generating on your device...":"Checking the study guide...");
         loading.classList.add("thinking");
         const web=needsSearch?await searchTutorWeb(message,activeTutorAbortController?.signal):{articles:[],fetchedAt:""};
-        if(epoch!==generationEpoch)return;
+        if(!isCurrent())return;
         let answer;
         const hasPaperSnapshot=/\b(portfolio|positions|holdings|watchlist)\b/i.test(message);
         const mode=needsSearch?(localEngine&&!useGuide?"On-device model · linked news sources":"Built-in guide · linked news sources"):hasPaperSnapshot?"Calculated paper snapshot · fixed sample prices":localEngine&&!useGuide?"On-device model generation":"Built-in study guide";
         try{answer=localEngine && !useGuide?await generateLocalAnswer(loading,web,epoch,activeTutorAbortController?.signal):builtInTutor(message);}
         catch{answer=`Local AI could not finish. Built-in study guide:\n\n${builtInTutor(message)}`;}
-        if(epoch!==generationEpoch)return;
+        if(!isCurrent())return;
         if(needsSearch && !web.articles.length)answer=`No current news sources could be retrieved. This answer is general education, not a report of current events.\n\n${answer}`;
         loading.remove();loading=null;addChatMessage("assistant",answer,web.articles,mode);
         chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-40);await persistTutorHistory();
     }catch(error){
-        if(epoch===generationEpoch)$("tutorStatus").textContent=`Tutor could not finish: ${String(error.message || error).slice(0,140)}. You can try again.`;
+        if(isCurrent())$("tutorStatus").textContent=`Tutor could not finish: ${String(error.message || error).slice(0,140)}. You can try again.`;
     }finally{if(loading)loading.remove();tutorIsGenerating=false;activeTutorAbortController=null;$("aiSend").disabled=false;if(cancelButton)cancelButton.hidden=true;}
 }
 
@@ -4032,7 +4036,6 @@ async function submitMiniTutor(event) {
         return;
     }
 
-    const mainDraft = $("aiInput").value;
     input.value = "";
     button.disabled = true;
     $("miniTutorStatus").textContent = localEngine
@@ -4042,7 +4045,6 @@ async function submitMiniTutor(event) {
     try {
         await sendAI(message);
         if(epoch!==generationEpoch)return;
-        $("aiInput").value = mainDraft;
         renderMiniTutorMessages();
         $("miniTutorStatus").textContent = localEngine && !usesVerifiedNotes
             ? "Generated on this device. Verify financial facts; it can make mistakes."

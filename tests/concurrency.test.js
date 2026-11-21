@@ -185,3 +185,54 @@ test('a failed legacy migration retains its original portfolio and readable prof
     await Promise.resolve();await Promise.resolve();await Promise.resolve();
     assert.equal(saved(store),before);assert.equal(h.run('profile.email'),'legacy@example.test');assert.equal(h.run('account.cash'),81234);
 });
+
+function rememberedTutor() {
+    return harness(new Map([['turboRememberTutor:guest','true'],['turboTutorHistory:guest','[]']]),{boot:true});
+}
+
+test('cancelling a tutor send waiting on storage preserves a newly typed main draft',async()=>{
+    const h=rememberedTutor(),locks=h.context.navigator.locks,requested=delayedLock(h);
+    h.element('aiInput').value='Explain dividends';const pending=h.run('sendAI()');
+    h.run('cancelAI()');h.element('aiInput').value='New unsent question';
+    h.context.navigator.locks=locks;requested().grant();await pending;
+    assert.equal(h.element('aiInput').value,'New unsent question');assert.equal(h.run('chatHistory.some(item=>item.role==="assistant")'),false);
+    assert.equal(h.run('tutorIsGenerating'),false);assert.equal(h.element('aiSend').disabled,false);
+});
+
+test('a tutor send waiting on storage preserves the next profile’s draft and conversation',async()=>{
+    const h=rememberedTutor(),locks=h.context.navigator.locks,requested=delayedLock(h);
+    h.element('aiInput').value='Explain dividends';const pending=h.run('sendAI()');
+    const user={name:'Other',email:'other@example.test',passwordHash:null,account:{cash:50000,positions:{},history:[],watchlist:[]},lessonProgress:{}};
+    h.store.set('novaUsers',JSON.stringify({'other@example.test':user}));h.store.set('novaSession','other@example.test');h.run('refreshWorkspaceFromStorage()');
+    h.element('aiInput').value='New profile unsent question';
+    h.context.navigator.locks=locks;requested().grant();await pending;
+    assert.equal(h.element('aiInput').value,'New profile unsent question');assert.equal(h.run('chatHistory.length'),0);
+    assert.equal(h.store.has('turboTutorHistory:other%40example.test'),false);
+});
+
+test('main tutor sends clear only the unchanged submitted draft after delayed storage',async()=>{
+    for(const edit of [false,true]) {
+        const h=rememberedTutor(),locks=h.context.navigator.locks,requested=delayedLock(h);
+        h.element('aiInput').value='Explain dividends';const pending=h.run('sendAI()');
+        if(edit)h.element('aiInput').value='Next unsent question';
+        h.context.navigator.locks=locks;requested().grant();await pending;
+        assert.equal(h.element('aiInput').value,edit?'Next unsent question':'');
+        assert.equal(h.run('chatHistory[0].content'),'Explain dividends');assert.match(h.run('chatHistory.at(-1).content'),/Dividends/);
+    }
+});
+
+test('optional-message sends preserve the main draft while their storage is delayed',async()=>{
+    const h=rememberedTutor(),locks=h.context.navigator.locks,requested=delayedLock(h);
+    h.element('aiInput').value='Unsent main draft';const pending=h.run('sendAI("Explain dividends")');
+    h.element('aiInput').value='Edited main draft';
+    h.context.navigator.locks=locks;requested().grant();await pending;
+    assert.equal(h.element('aiInput').value,'Edited main draft');assert.match(h.run('chatHistory.at(-1).content'),/Dividends/);
+});
+
+test('the quick tutor does not restore an old main draft after its delayed optional send',async()=>{
+    const h=rememberedTutor(),locks=h.context.navigator.locks,requested=delayedLock(h);
+    h.element('aiInput').value='Original main draft';h.element('miniTutorInput').value='Explain dividends';
+    const pending=h.run('submitMiniTutor({preventDefault(){}})');h.element('aiInput').value='Edited main draft';
+    h.context.navigator.locks=locks;requested().grant();await pending;
+    assert.equal(h.element('aiInput').value,'Edited main draft');assert.equal(h.element('miniTutorSend').disabled,false);
+});
