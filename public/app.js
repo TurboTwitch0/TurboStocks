@@ -4258,15 +4258,15 @@ document.addEventListener(
 
         document.addEventListener("keydown", event => {
             if (document.querySelector(".modal.open")) return;
+            if(event.key === "Escape" && !$("miniTutorPanel")?.hidden && event.target?.closest?.(".mini-tutor")) {
+                event.preventDefault();
+                toggleMiniTutor(false);
+                return;
+            }
             if(event.key === "Escape" && !$("mobileMoreMenu")?.hidden) {
                 event.preventDefault();
                 toggleMobileMore(false);
                 $("mobileMoreButton")?.focus();
-                return;
-            }
-            if(event.key === "Escape" && !$("miniTutorPanel")?.hidden && event.target?.closest?.(".mini-tutor")) {
-                event.preventDefault();
-                toggleMiniTutor(false);
             }
         });
 

@@ -400,3 +400,14 @@ test('mobile navigation and home dashboard expose compact, accessible destinatio
     assert.match(app,/homeInvestedValue/);
 });
 
+
+test('Escape from the focused tutor takes priority over an open mobile More menu',()=>{
+    const h=harness(new Map(),{boot:true});
+    h.run('toggleMiniTutor(true);toggleMobileMore(true)');
+    h.element('miniTutorInput').closest=()=>h.element('miniTutorPanel');
+    h.element('miniTutorInput').focus();
+    for(const handler of h.events.get('keydown'))handler({key:'Escape',target:h.element('miniTutorInput'),preventDefault(){}});
+    assert.equal(h.element('miniTutorPanel').hidden,true);
+    assert.equal(h.element('mobileMoreMenu').hidden,false);
+    assert.equal(h.context.document.activeElement,h.element('miniTutorLauncher'));
+});
