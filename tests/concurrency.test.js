@@ -236,3 +236,51 @@ test('the quick tutor does not restore an old main draft after its delayed optio
     h.context.navigator.locks=locks;requested().grant();await pending;
     assert.equal(h.element('aiInput').value,'Edited main draft');assert.equal(h.element('miniTutorSend').disabled,false);
 });
+
+function answerLesson(h) {
+    h.run('openLesson(lessons[0].id)');
+    let chosen=h.run('selectedLesson.quiz.map(question=>String(question.answer))');
+    const query=h.context.document.querySelector;
+    h.context.document.querySelector=selector=>selector.startsWith('input[name="quiz')
+        ?(chosen[Number(selector.match(/quiz(\d+)/)[1])]===undefined?null:{value:chosen[Number(selector.match(/quiz(\d+)/)[1])]})
+        :query(selector);
+    return {id:h.run('selectedLesson.id'),choose:values=>{chosen=values;}};
+}
+
+test('old quiz success saves progress without populating a freshly reopened same-lesson dialog',async()=>{
+    const h=harness(new Map(),{boot:true}),lesson=answerLesson(h),requested=delayedLock(h);
+    const pending=h.run('submitQuiz()');h.run(`closeLesson();openLesson(${JSON.stringify(lesson.id)})`);lesson.choose([]);
+    requested().grant();await pending;
+    assert.equal(h.run(`lessonProgress[${JSON.stringify(lesson.id)}].percent`),100);
+    assert.equal(h.element('quizResult').innerHTML,'');assert.equal(h.element('quizResult').textContent,'');
+    assert.equal(h.element('quizSubmit').disabled,false);
+});
+
+test('old quiz storage failure cannot replace a new same-lesson dialog with its error',async()=>{
+    const h=harness(new Map(),{boot:true}),lesson=answerLesson(h),requested=delayedLock(h);
+    const pending=h.run('submitQuiz()');h.run(`closeLesson();openLesson(${JSON.stringify(lesson.id)})`);lesson.choose(['0']);
+    h.storage.setItem=()=>{throw new Error('Quota exceeded');};requested().grant();await pending;
+    assert.equal(h.element('quizResult').textContent,'');assert.equal(h.element('quizResult').innerHTML,'');
+    assert.match(h.element('storageStatus').textContent,/earlier quiz.*could not be saved/);
+    assert.equal(h.run(`lessonProgress[${JSON.stringify(lesson.id)}]`),undefined);assert.equal(h.element('quizSubmit').disabled,false);
+});
+
+test('rapid repeated quiz submits queue one save and disable only its pending submit',async()=>{
+    const h=harness(new Map(),{boot:true});answerLesson(h);const requested=delayedLock(h),request=h.context.navigator.locks.request;let count=0;
+    h.context.navigator.locks.request=(...args)=>{count++;return request(...args);};
+    const first=h.run('submitQuiz()'),second=h.run('submitQuiz()');assert.equal(count,1);
+    assert.equal(h.element('quizSubmit').disabled,true);requested().grant();await Promise.all([first,second]);
+    assert.equal(h.element('quizSubmit').disabled,false);assert.equal(h.element('quizSubmit').textContent,'Submit Quiz');
+    assert.match(h.element('quizResult').innerHTML,/Lesson complete/);
+});
+
+test('an old quiz completion cannot release a newer presentation’s pending submit',async()=>{
+    const h=harness(new Map(),{boot:true}),lesson=answerLesson(h),requests=[];
+    h.context.navigator.locks.request=(name,options,callback)=>new Promise((resolve,reject)=>requests.push({grant(){try{resolve(callback({name}));}catch(error){reject(error);}}}));
+    const old=h.run('submitQuiz()');h.run(`closeLesson();openLesson(${JSON.stringify(lesson.id)})`);lesson.choose(['0']);const next=h.run('submitQuiz()');
+    assert.equal(requests.length,2);requests[0].grant();await old;
+    assert.equal(h.element('quizResult').innerHTML,'');assert.equal(h.element('quizSubmit').disabled,true);
+    requests[1].grant();await next;
+    assert.equal(h.element('quizSubmit').disabled,false);assert.match(h.element('quizResult').textContent,/Saved progress changed/);
+    assert.equal(h.run(`lessonProgress[${JSON.stringify(lesson.id)}].percent`),100);
+});

@@ -1,5 +1,11 @@
 # Turbo Stocks changes and verification
 
+## Keep queued quiz feedback with its dialog — November 21, 2026
+
+- Each opened lesson and quiz submission now has a presentation owner. A queued quiz still saves its legitimately submitted progress, but its score/error/cleanup cannot affect a freshly reopened lesson, including the same lesson ID, or release a newer pending submission's controls.
+- Submit is disabled only for the current pending submission, and repeated submissions while it waits do not queue duplicate saves. Closing/reopening the lesson creates an enabled, fresh presentation and preserves newer answers when an earlier request finishes.
+- Four focused regressions reproduced stale feedback, late errors, duplicate saves, and incorrect control ownership before repair. Syntax checks and all **100 tests** passed. Chromium checks with a native lock held in another tab verified single/double submission, same-lesson reopening, late quota failure, and an older completion while a newer submit remained held. Legitimate old progress and newer answers were preserved; no runtime errors or external requests occurred. No account schema, lesson IDs, lock protocol, or deployment behavior changed.
+
 ## Preserve tutor drafts during delayed saves — November 21, 2026
 
 - A tutor send now checks its captured generation and profile after awaiting chat storage, before changing the main input. It clears only the unchanged main draft that was actually submitted. Optional-message and quick-tutor sends preserve the main draft, including edits made while they wait.

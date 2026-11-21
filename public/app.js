@@ -127,6 +127,8 @@ let currentSymbol = "AAPL";
 let currentLessonFilter = "all";
 
 let selectedLesson = null;
+let lessonPresentation = 0;
+let currentQuizSubmission = null;
 
 let authMode = "signin";
 let authPending = false;
@@ -2409,6 +2411,8 @@ function openLesson(id) {
 
 
     if (!selectedLesson) return;
+    lessonPresentation++;
+    currentQuizSubmission=null;
 
 
     $("lessonCategory")
@@ -2486,6 +2490,8 @@ function openLesson(id) {
             }
 
             <button
+                id="quizSubmit"
+                type="button"
                 class="primary wide"
                 onclick="submitQuiz()"
             >
@@ -2495,6 +2501,8 @@ function openLesson(id) {
             <div id="quizResult"></div>
         `;
 
+    $("quizSubmit").disabled=false;
+    $("quizSubmit").textContent="Submit Quiz";
 
     showDialog("lessonModal");
 
@@ -2505,21 +2513,40 @@ function closeLesson(){
     hideDialog("lessonModal");
 
     selectedLesson = null;
+    lessonPresentation++;
+    currentQuizSubmission=null;
 
 }
 
 
 function submitQuiz() {
     const lesson = selectedLesson;
-    if (!lesson) return Promise.resolve(false);
+    if (!lesson || currentQuizSubmission) return Promise.resolve(false);
     const answers = lesson.quiz.map((_, index) => document.querySelector(`input[name="quiz${index}"]:checked`)?.value);
-    return withAppDataLock(() => submitQuizNow(lesson, answers), { onError: error => {
-        if (selectedLesson?.id === lesson.id) $("quizResult").textContent=error.message;
-        else reportStorage(error.message);
-    } });
+    const submission={presentation:lessonPresentation,actor:profile?.email || null};
+    currentQuizSubmission=submission;
+    const button=$("quizSubmit");
+    if(button){button.disabled=true;button.textContent="Saving quiz…";}
+    const ownsPresentation=()=>currentQuizSubmission===submission && lessonPresentation===submission.presentation && selectedLesson?.id===lesson.id;
+    const view={
+        isCurrent:()=>ownsPresentation() && submission.actor===(profile?.email || null),
+        error:error=>{
+            if(view.isCurrent())$("quizResult").textContent=error.message;
+            else reportStorage(`An earlier quiz submission could not be saved: ${error.message}`);
+        }
+    };
+    const finish=()=>{
+        if(!ownsPresentation())return;
+        currentQuizSubmission=null;
+        if(button){button.disabled=false;button.textContent="Submit Quiz";}
+    };
+    return withAppDataLock(() => {
+        try{return submitQuizNow(lesson,answers,view);}
+        finally{finish();}
+    }, {onError:error=>{view.error(error);finish();}});
 }
 
-function submitQuizNow(lesson, answers) {
+function submitQuizNow(lesson, answers, view) {
 
     if (!lesson) return;
 
@@ -2587,14 +2614,14 @@ function submitQuizNow(lesson, answers) {
     };
 
 
-    try{saveEverything();}catch(error){lessonProgress=previousProgress;$("quizResult").textContent=error.message;return;}
+    try{saveEverything();}catch(error){lessonProgress=previousProgress;view.error(error);return;}
 
     updateLessonProgress();
 
     renderLessons();
 
 
-    if (selectedLesson?.id !== lesson.id) return;
+    if (!view.isCurrent()) return;
     const feedback=lesson.quiz.map((question,index)=>{
         const chosen=answers[index];
         const correct=question.choices[question.answer];
