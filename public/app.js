@@ -238,6 +238,9 @@ function withAppDataLock(action, { scope = "account", keys = [], ifAvailable = f
         const loaded=record=>{
             authority.adopt(record);
             try{assertAppDataContext(expected);}catch(error){refreshWorkspaceFromStorage();throw error;}
+            const session=getLocal("novaSession"),users=loadUsers();
+            const authoritativeActor=session&&Object.hasOwn(users,session)?session:null;
+            if(authoritativeActor!==(profile?.email||null)||savedSnapshot!==persistedSignature())refreshWorkspaceFromStorage();
             let settled=false,durable=false;const before=memoryState(),stage={data:{...record.data},afterCommit:[],afterSettled:[]};
             appDataStage=stage;appDataLockHeld=true;activeAppDataContext=expected;
             const settle=()=>{

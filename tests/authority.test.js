@@ -201,3 +201,21 @@ test('aborted authoritative import retains all saved data and unsent drafts',asy
     assert.equal(saved(h),beforeSaved);assert.equal(memory(h),beforeMemory);assert.equal(h.element('aiInput').value,'Main import draft');assert.equal(h.element('miniTutorInput').value,'Quick import draft');
     assert.doesNotMatch(h.element('backupStatus').textContent,/Backup imported/);assert.match(h.element('backupStatus').textContent,/failed/i);
 });
+
+test('theme, export and note actions refresh adopted account state while preserving unsent work',async()=>{
+    for(const action of ['toggleTheme()','exportLocalBackup()','saveCommunityNote({preventDefault(){}})']) {
+        const store=new Map(),first=harness(store,{boot:true}),second=harness(store,{boot:true});
+        await first.run('placePaperOrder("AAPL","BUY",1)');assert.equal(second.run('account.history.length'),0);
+        second.element('aiInput').value='Main draft while stale';second.element('miniTutorInput').value='Quick draft while stale';
+        second.element('communityClaimSymbol').value='AAPL';second.element('communityClaim').value='A scoped observation';
+        second.element('communitySource').value='Other';second.element('communityTone').value='unverified';
+        second.run('chatHistory=[{role:"user",content:"In-tab unsaved chat"}];downloadJSON=payload=>{exportedBackup=payload;}');
+        await second.run(action);await second.run('syncAuthoritativeWorkspace()');
+        assert.equal(second.run('account.positions.AAPL?.shares'),1,`${action} left the portfolio stale after adopting its authority revision`);
+        assert.equal(second.run('savedSnapshot===persistedSignature()'),true);
+        assert.equal(second.element('aiInput').value,'Main draft while stale');assert.equal(second.element('miniTutorInput').value,'Quick draft while stale');
+        assert.equal(second.run('chatHistory[0].content'),'In-tab unsaved chat');
+        if(action==='exportLocalBackup()')assert.equal(JSON.parse(second.run('exportedBackup.data.turboGuestStateV2')).account.positions.AAPL.shares,1);
+        if(action.startsWith('saveCommunityNote'))assert.equal(JSON.parse(store.get('turboCommunityNotes:guest'))[0].claim,'A scoped observation');
+    }
+});

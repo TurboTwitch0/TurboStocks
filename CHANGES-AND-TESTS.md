@@ -1,5 +1,10 @@
 # Turbo Stocks changes and verification
 
+## Keep displayed accounts aligned with adopted authority — November 21, 2026
+
+- Theme, export, and scoped-note operations now reconcile account/session memory with the authoritative snapshot after captured actor/context validation and before staging. Adopting a newer revision can no longer leave an old portfolio that later equal-revision sync skips. Stale account actions still reject before refresh and do not replay on a new profile.
+- Added a failed-before/passed-after regression covering all three operations, coherent saved signatures, and preserved main/quick drafts plus unsaved conversations. Syntax checks and all **116 tests** passed. No storage schema, transaction protocol, or deployment behavior changed.
+
 ## Make browser transactions authoritative — November 21, 2026
 
 - Reproduced a second loss despite an exclusive native lock: A saved/released, then B entered but four localStorage reads still returned the previous empty account. Both UI orders reported completion; reloading both tabs retained only B's trade. The bounded trace stopped at the first failure, round 27.
