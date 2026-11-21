@@ -35,7 +35,7 @@ test('a queued stale order cannot replace another tab’s completed trade',async
     const pending=second.run('placePaperOrder("AAPL","BUY",1)');
     await first.run('placePaperOrder("MSFT","BUY",1)');const before=saved(store);
     requested().grant();await pending;
-    assert.equal(saved(store),before);assert.equal(previews,0);assert.equal(second.run('account.history.length'),0);
+    assert.equal(saved(store),before);assert.equal(previews,0);assert.equal(second.run('account.positions.MSFT.shares'),1);
     assert.match(second.element('orderStatus').textContent,/not placed.*changed while this action was waiting/);
     assert.equal(second.run('paperOrderPending'),false);
 });
@@ -49,13 +49,14 @@ test('a queued action cannot move a guest order into a newly active profile',asy
     assert.match(second.element('orderStatus').textContent,/not placed.*changed/);
 });
 
-test('preview revalidation rejects progress refreshed while confirmation was open',async()=>{
-    const h=harness(new Map(),{boot:true});
+test('authoritative CAS rejects a competing commit made while confirmation was open',async()=>{
+    const store=new Map(),h=harness(store,{boot:true}),outside=harness(store,{boot:true});
     h.context.confirm=()=>{
-        h.store.set('turboGuestStateV2',JSON.stringify({account:{cash:99490,positions:{MSFT:{shares:1,averagePrice:510}},history:[],watchlist:[]},lessonProgress:{}}));
-        h.run('refreshWorkspaceFromStorage()');return true;
+        outside.authority.commit(outside.authority.load().revision,{turboGuestStateV2:JSON.stringify({account:{cash:99490,positions:{MSFT:{shares:1,averagePrice:510}},history:[],watchlist:[]},lessonProgress:{}})});
+        return true;
     };
     await h.run('placePaperOrder("AAPL","BUY",1)');
+    await h.run('syncAuthoritativeWorkspace()');
     assert.equal(JSON.parse(h.store.get('turboGuestStateV2')).account.positions.MSFT.shares,1);
     assert.equal(h.run('account.positions.MSFT.shares'),1);assert.equal(h.run('account.positions.AAPL'),undefined);
     assert.match(h.element('orderStatus').textContent,/not placed/);

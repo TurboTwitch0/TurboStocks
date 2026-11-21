@@ -169,12 +169,19 @@ function validateBackup(payload) {
 }
 
 function snapshotAppData() {
-    const data = {};
-    for (let index = 0; index < localStorage.length; index++) {
-        const key = localStorage.key(index);
-        if (supportedBackupKey(key)) data[key] = localStorage.getItem(key);
-    }
-    return data;
+    return Object.fromEntries(Object.entries(appDataSnapshot()).filter(([key])=>supportedBackupKey(key)));
+}
+let backupFeedbackRequest=0;
+async function showPreservedCopies(status,request){
+    const rows=await window.workspaceAuthority?.getRecoveries?.()||[];
+    if(request!==backupFeedbackRequest||!rows.length||!status)return;
+    statusText(status,"Current backup exported. Preserved copies are also available: ");
+    rows.forEach((row,index)=>{
+        const payload=row.rawRecord||backupPayload(row.data);
+        const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+        const link=document.createElement("a");link.href=url;link.download=`turbo-stocks-preserved-${index+1}.json`;link.textContent=` Download preserved copy ${index+1}`;status.appendChild(link);
+        setTimeout(()=>URL.revokeObjectURL(url),10*60*1000);
+    });
 }
 
 function backupPayload(data) { return { product: "Turbo Stocks", formatVersion: BACKUP_VERSION, exportedAt: new Date().toISOString(), data }; }
@@ -187,7 +194,7 @@ function downloadJSON(payload, filename) {
 
 function exportLocalBackup() {
     const exportSnapshot = () => exportLocalBackupNow();
-    if (!navigator.locks?.request) return exportSnapshot();
+    if (!navigator.locks?.request || !window.workspaceAuthority?.available) return exportSnapshot();
     return withAppDataLock(exportSnapshot, {scope:"none",onError:()=>{
         reportStorage("A coordinated export is unavailable. This read-only backup captures the available saved values; close other editing tabs before exporting again.");
         exportSnapshot();
@@ -200,6 +207,7 @@ function exportLocalBackupNow() {
         const serialized = JSON.stringify(backupPayload(data), null, 2);
         if (new TextEncoder().encode(serialized).length > BACKUP_LIMIT) throw new Error("Backup exceeds the 10 MB file limit.");
         downloadJSON(backupPayload(data), "turbo-stocks-browser-backup.json");
+        showPreservedCopies(document.getElementById("backupStatus"),++backupFeedbackRequest).catch(()=>{});
     } catch (error) { reportStorage(`Could not export browser storage: ${error.message || "Allow site storage and try again."}`); }
 }
 window.exportLocalBackup = exportLocalBackup;
@@ -222,34 +230,14 @@ function acquireImportLock() {
 }
 
 async function exclusiveImport(callback) {
-    return withAppDataLock(callback, {scope:"workspace",ifAvailable:true,onError:error=>{throw error;}});
+    let failure;
+    const result=await withAppDataLock(callback,{scope:"workspace",ifAvailable:true,onError:error=>{failure=error;}});
+    if(failure)throw failure;
+    return result;
 }
 
 function statusText(node, message) { if (node) { node.replaceChildren?.(); node.textContent = message; } }
 
-function restoreSnapshot(previous, imported) {
-    const keys = new Set([...Object.keys(previous), ...Object.keys(imported)]), failures = [];
-    for (const key of keys) {
-        try {
-            if (Object.hasOwn(previous, key)) localStorage.setItem(key, previous[key]);
-            else localStorage.removeItem(key);
-        } catch { failures.push(key); }
-    }
-    for (const key of keys) {
-        try { if (localStorage.getItem(key) !== (Object.hasOwn(previous, key) ? previous[key] : null)) failures.push(key); }
-        catch { failures.push(key); }
-    }
-    return [...new Set(failures)];
-}
-
-function recoveryDownload(previous, status) {
-    try {
-        const url = URL.createObjectURL(new Blob([JSON.stringify(backupPayload(previous), null, 2)], { type: "application/json" }));
-        statusText(status, "Automatic rollback could not be fully verified. Download this recovery file and keep it safe: ");
-        const link = document.createElement("a"); link.href = url; link.download = "turbo-stocks-recovery-backup.json"; link.textContent = "Download recovery backup"; status.appendChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
-    } catch { statusText(status, "Automatic rollback could not be verified, and a recovery download could not be prepared. Stop using this tab. Check browser storage and export any remaining data before reloading."); }
-}
 
 function changedCategories(keys) {
     const categories = [];
@@ -262,53 +250,34 @@ function changedCategories(keys) {
     return categories.length ? categories.join(", ") : "saved app data";
 }
 
-async function performImport(input, status, file = input.files?.[0]) {
-    const token = acquireImportLock();
-    let completed = false, refresh = false;
-    try {
-        if (!file) return false;
-        if (!Number.isFinite(file.size) || file.size > BACKUP_LIMIT) throw new Error("Choose a backup file no larger than 10 MB.");
-        const text = await file.text();
-        if (new TextEncoder().encode(text).length > BACKUP_LIMIT) throw new Error("The backup exceeds the 10 MB import limit.");
-        const imported = validateBackup(safeJSON(text, "Backup file"));
-        const previous = snapshotAppData(), initialSignature = JSON.stringify(Object.entries(previous).sort(([a], [b]) => a.localeCompare(b)));
-        const previousUsers = previous.novaUsers ? Object.keys(JSON.parse(previous.novaUsers)).length : 0;
-        const importedUsers = imported.novaUsers ? Object.keys(JSON.parse(imported.novaUsers)).length : 0;
-        const affected = [...new Set([...Object.keys(previous), ...Object.keys(imported)])];
-        const approved = window.confirm(`Backup replacement preview\nCurrent saved items: ${Object.keys(previous).length}\nItems in backup: ${Object.keys(imported).length}\nDemo profiles: ${previousUsers} current → ${importedUsers} in backup\nAffected categories: ${changedCategories(affected)}\nTurbo Stocks keys missing from the backup will be removed. Other applications' browser data is not included. Continue?`);
-        if (!approved) return false;
-        const current = snapshotAppData(), currentSignature = JSON.stringify(Object.entries(current).sort(([a], [b]) => a.localeCompare(b)));
-        if (currentSignature !== initialSignature) throw new Error("Saved data changed while the backup was being reviewed. Nothing was replaced; retry the import.");
-
-        try {
-            for (const key of Object.keys(previous)) localStorage.removeItem(key);
-            for (const [key, value] of Object.entries(imported)) localStorage.setItem(key, value);
-            for (const key of affected) if (localStorage.getItem(key) !== (Object.hasOwn(imported, key) ? imported[key] : null)) throw new Error("A saved value did not match the imported backup.");
-            completed = true; refresh = true;
-        } catch (error) {
-            const failed = restoreSnapshot(previous, imported);
-            if (failed.length) recoveryDownload(previous, status);
-            else statusText(status, `Import failed (${error.message || "browser storage rejected the write"}). The previous Turbo Stocks data was restored and verified.`);
-            return false;
-        }
-    } finally {
-        try {
-            const raw = localStorage.getItem(IMPORT_LOCK_KEY);
-            if (raw && JSON.parse(raw).token === token) localStorage.removeItem(IMPORT_LOCK_KEY);
-        } catch {
-            if (completed) { completed = false; statusText(status, "Backup data was saved, but the cross-tab import lock could not be cleared. Close other Turbo Stocks tabs and reload after storage works again."); }
-        }
-    }
-    if (refresh && completed) {
+async function performImport(input,status,file=input.files?.[0]) {
+    let token;
+    try{token=acquireImportLock();}catch{/* The authoritative lock/CAS remains required; the legacy marker is best-effort. */}
+    if(token)afterDataSettled(()=>{
+        try{const raw=localStorage.getItem(IMPORT_LOCK_KEY);if(raw&&JSON.parse(raw).token===token)localStorage.removeItem(IMPORT_LOCK_KEY);}
+        catch{reportStorage("Authoritative data is safe. A legacy import marker could not be cleared; allow browser storage and retry after two minutes.");}
+    });
+    if(!file)return false;
+    if(!Number.isFinite(file.size)||file.size>BACKUP_LIMIT)throw new Error("Choose a backup file no larger than 10 MB.");
+    const text=await file.text();
+    if(new TextEncoder().encode(text).length>BACKUP_LIMIT)throw new Error("The backup exceeds the 10 MB import limit.");
+    const imported=validateBackup(safeJSON(text,"Backup file")),previous=snapshotAppData();
+    const previousUsers=previous.novaUsers?Object.keys(JSON.parse(previous.novaUsers)).length:0;
+    const importedUsers=imported.novaUsers?Object.keys(JSON.parse(imported.novaUsers)).length:0;
+    const affected=[...new Set([...Object.keys(previous),...Object.keys(imported)])];
+    if(!window.confirm(`Backup replacement preview\nCurrent saved items: ${Object.keys(previous).length}\nItems in backup: ${Object.keys(imported).length}\nDemo profiles: ${previousUsers} current → ${importedUsers} in backup\nAffected categories: ${changedCategories(affected)}\nTurbo Stocks keys missing from the backup will be removed. Other applications' browser data is not included. Continue?`))return false;
+    replaceAppData(imported);
+    afterDataCommit(()=>{
         window.refreshWorkspaceFromStorage?.();
-        statusText(status, "Backup imported and the current profile, portfolio, lessons, chats, and notes were refreshed.");
-    }
-    return completed;
+        statusText(status,"Backup imported and the saved workspace was refreshed.");
+    });
+    return true;
 }
 
 async function importLocalBackup(input) {
     const status = document.getElementById("backupStatus");
     const file = input.files?.[0];
+    backupFeedbackRequest++;
     try {
         const run = () => performImport(input, status, file);
         await exclusiveImport(run);
@@ -337,7 +306,7 @@ function exportTradeHistoryCsv() {
 }
 window.exportTradeHistoryCsv = exportTradeHistoryCsv;
 
-document.addEventListener("DOMContentLoaded", () => {
+onDocumentReady(() => {
     const resetHelpPopovers = () => document.querySelectorAll(".help-trigger").forEach(trigger => trigger.setAttribute("aria-expanded", "false"));
     resetHelpPopovers();
     window.addEventListener("pageshow", resetHelpPopovers);
@@ -379,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("storage", event => {
         if (event.key === IMPORT_LOCK_KEY) {
             if (event.newValue) reportStorage("A backup is being imported in another tab. Saving is paused here.");
-            else { window.refreshWorkspaceFromStorage?.(); reportStorage("Saved data was refreshed after the backup import in another tab."); }
+            else syncAuthoritativeWorkspace();
             return;
         }
         if (![
@@ -387,13 +356,12 @@ document.addEventListener("DOMContentLoaded", () => {
             "novaAccount", "novaLessonProgress", "novaProfile", "turboRememberTutor", "turboTutorHistory", "turboCommunityNotes"
         ].includes(event.key) && !/^(turboRememberTutor|turboTutorHistory|turboCommunityNotes):/.test(event.key || "")) return;
         if (activeImportLock(localStorage.getItem(IMPORT_LOCK_KEY))) return;
-        window.refreshWorkspaceFromStorage?.();
-        reportStorage("Local progress was updated from another tab.");
+        syncAuthoritativeWorkspace();
     });
     if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("/sw.js").catch(() => console.warn("Offline application shell could not be registered."));
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+onDocumentReady(() => {
     const input = document.getElementById("globalSearch");
     const results = document.getElementById("searchResults");
     const container = input?.closest(".global-search");

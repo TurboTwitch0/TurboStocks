@@ -132,6 +132,7 @@ let currentQuizSubmission = null;
 
 let authMode = "signin";
 let authPending = false;
+let authPresentation=0;
 let storageUnavailable = false;
 let usersRecovery = false;
 let portfolioRecovery = false;
@@ -216,30 +217,70 @@ function assertAppDataContext(expected) {
         throw new Error("Saved progress changed while this action was waiting. Refresh this tab, review the current profile and progress, then try again.");
     }
 }
-function withAppDataLock(action, { scope = "account", keys = [], ifAvailable = false, onError = error => reportStorage(error.message || "Could not safely save this change.") } = {}) {
-    const expected = scope === "none" ? null : {
-        email: profile?.email || null,
-        ...(scope === "account" ? { snapshot: savedSnapshot } : {}),
-        keys: keys.map(key => Array.isArray(key) ? key : [key, getLocal(key)])
+let appDataStage=null;
+let pendingAuthorityRefresh=false;
+function afterDataCommit(callback){if(appDataStage)appDataStage.afterCommit.push(callback);else callback();}
+function afterDataSettled(callback){if(appDataStage)appDataStage.afterSettled.push(callback);else callback();}
+function appDataSnapshot(){return appDataStage?{...appDataStage.data}:window.workspaceAuthority?.snapshot()||{};}
+function replaceAppData(data){if(!appDataStage)throw new Error("Safe storage transaction is required.");appDataStage.data={...data};}
+function memoryState(){return {profile,account,lessonProgress,savedSnapshot,communityNotes,portfolioRecovery,usersRecovery,tutorHistorySnapshot};}
+function restoreMemory(state){({profile,account,lessonProgress,savedSnapshot,communityNotes,portfolioRecovery,usersRecovery,tutorHistorySnapshot}=state);}
+function onDocumentReady(callback){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",callback);else callback();}
+function withAppDataLock(action, { scope = "account", keys = [], ifAvailable = false, onError = error => reportStorage(error.message || "Could not safely save this change."),onSettled=()=>{} } = {}) {
+    const expected=scope==="none"?null:{email:profile?.email||null,...(scope==="account"?{snapshot:savedSnapshot}:{}),keys:keys.map(key=>Array.isArray(key)?key:[key,getLocal(key)])};
+    const authority=window.workspaceAuthority;let optionSettled=false;
+    const notifySettled=()=>{if(optionSettled)return;optionSettled=true;try{onSettled();}catch{reportStorage("The save finished. Refresh this tab to update its controls.");}};
+    const fail=error=>{try{onError(error);}catch{reportStorage(error.message||"The change was not saved.");}finally{notifySettled();}return false;};
+    if(!navigator.locks?.request){return Promise.resolve(fail(new Error(SAFE_SAVE_UNAVAILABLE)));}
+    if(!authority?.available){return Promise.resolve(fail(new Error(authority?.warning||"Authoritative browser storage is unavailable. Saved data remains readable and exportable; allow site storage and reload.")));}
+    const execute=lock=>{
+        if(!lock){throw new Error("Another tab is updating Turbo Stocks data. Wait for it to finish, then try again.");}
+        const loaded=record=>{
+            authority.adopt(record);
+            try{assertAppDataContext(expected);}catch(error){refreshWorkspaceFromStorage();throw error;}
+            let settled=false,durable=false;const before=memoryState(),stage={data:{...record.data},afterCommit:[],afterSettled:[]};
+            appDataStage=stage;appDataLockHeld=true;activeAppDataContext=expected;
+            const settle=()=>{
+                if(settled)return;settled=true;
+                appDataStage=null;appDataLockHeld=false;activeAppDataContext=null;
+                for(const callback of stage.afterSettled)try{callback();}catch{reportStorage("The save finished, but a temporary browser marker could not be cleared. Reload before editing again.");}
+                notifySettled();
+                if(pendingAuthorityRefresh){pendingAuthorityRefresh=false;syncAuthoritativeWorkspace();}
+            };
+            const abort=error=>{if(durable){settle();reportStorage("Data was saved. Refresh this tab to update its display.");return true;}if(!settled)restoreMemory(before);const value=fail(error);settle();return value;};
+            const prepared=value=>{
+                if(stage.error)return abort(stage.error);
+                const next=memoryState();restoreMemory(before);appDataStage=null;
+                const publish=committed=>{
+                    durable=true;
+                    authority.adopt(committed);restoreMemory(next);
+                    // Publication errors cannot turn an already committed transaction into a rollback.
+                    for(const callback of stage.afterCommit)try{callback();}catch{reportStorage("Data was saved. Refresh this tab to update its display.");}
+                    if(committed.warning)reportStorage(committed.warning);
+                    settle();return value===undefined?true:value;
+                };
+                try{
+                    const changed=JSON.stringify(Object.entries(stage.data).sort())!==JSON.stringify(Object.entries(record.data).sort());
+                    const committed=changed?authority.commit(record.revision,stage.data):record;
+                    return committed?.then?Promise.resolve(committed).then(publish,abort):publish(committed);
+                }catch(error){return abort(error);}
+            };
+            try{const result=action();return result?.then?Promise.resolve(result).then(prepared,abort):prepared(result);}
+            catch(error){return abort(error);}
+        };
+        let record;try{record=authority.load();}catch(error){throw error;}return record?.then?Promise.resolve(record).then(loaded):loaded(record);
     };
-    const fail = error => { onError(error); return false; };
-    if (!navigator.locks?.request) return Promise.resolve(fail(new Error(SAFE_SAVE_UNAVAILABLE)));
-    try {
-        return Promise.resolve(navigator.locks.request(APP_DATA_LOCK_NAME, { mode: "exclusive", ifAvailable }, lock => {
-            if (!lock) throw new Error("Another tab is updating Turbo Stocks data. Wait for it to finish, then try again.");
-            assertAppDataContext(expected);
-            appDataLockHeld = true;
-            activeAppDataContext = expected;
-            const release = () => { appDataLockHeld = false; activeAppDataContext = null; };
-            try {
-                const result = action();
-                if (result?.then) return Promise.resolve(result).finally(release);
-                release();
-                return result;
-            } catch (error) { release(); throw error; }
-        })).catch(error => fail(error?.name === "SecurityError" || error?.name === "NotAllowedError" ? new Error(SAFE_SAVE_UNAVAILABLE) : error));
-    } catch (error) { return Promise.resolve(fail(error?.name === "SecurityError" || error?.name === "NotAllowedError" ? new Error(SAFE_SAVE_UNAVAILABLE) : error)); }
+    try{return Promise.resolve(navigator.locks.request(APP_DATA_LOCK_NAME,{mode:"exclusive",ifAvailable},execute)).catch(error=>{return fail(error?.name==="SecurityError"||error?.name==="NotAllowedError"?new Error(SAFE_SAVE_UNAVAILABLE):error);});}
+    catch(error){return Promise.resolve(fail(error?.name==="SecurityError"||error?.name==="NotAllowedError"?new Error(SAFE_SAVE_UNAVAILABLE):error));}
 }
+async function syncAuthoritativeWorkspace(){
+    const authority=window.workspaceAuthority;
+    if(!authority?.available)return;
+    if(appDataLockHeld){pendingAuthorityRefresh=true;return;}
+    try{const record=await authority.load();if(appDataLockHeld){pendingAuthorityRefresh=true;return;}if(record.revision>authority.revision){authority.adopt(record);refreshWorkspaceFromStorage();}}
+    catch{reportStorage("Saved data could not be refreshed. Allow browser storage and reload before editing.");}
+}
+
 function backupImportIsActive() {
     let raw;
     try { raw=localStorage.getItem(BACKUP_IMPORT_LOCK_KEY); } catch { return false; }
@@ -254,20 +295,18 @@ function assertBackupImportIdle() {
     if(backupImportIsActive())throw new Error("A backup import is running in this browser. Saving is paused until it finishes.");
 }
 function getLocal(key) {
-    try {return localStorage.getItem(key);}
+    try {if(appDataStage)return Object.hasOwn(appDataStage.data,key)?appDataStage.data[key]:null;return window.workspaceAuthority?window.workspaceAuthority.read(key):localStorage.getItem(key);}
     catch {storageUnavailable=true;reportStorage("Browser storage is unavailable. Progress cannot be saved.");return null;}
 }
 function setLocal(key,value) {
     assertBackupImportIdle();
-    if (activeAppDataContext?.snapshot !== undefined) assertAppDataContext(activeAppDataContext);
-    try {localStorage.setItem(key,value);}
-    catch {storageUnavailable=true;reportStorage("Could not save progress. Browser storage is blocked or full.");throw new Error("Browser storage is blocked or full. Progress was not saved.");}
+    try {if(!appDataStage)throw new Error("Safe storage transaction is required.");appDataStage.data[key]=String(value);}
+    catch {if(appDataStage)appDataStage.error=new Error("Browser storage could not stage this save. Existing data is unchanged.");storageUnavailable=true;reportStorage("Could not save progress. Browser storage is blocked or full.");throw new Error("Browser storage is blocked or full. Progress was not saved.");}
 }
 function removeLocal(key) {
     assertBackupImportIdle();
-    if (activeAppDataContext?.snapshot !== undefined) assertAppDataContext(activeAppDataContext);
-    try {localStorage.removeItem(key);}
-    catch {storageUnavailable=true;reportStorage("Could not remove saved data. Allow browser storage and try again.");throw new Error("Browser storage is unavailable.");}
+    try {if(!appDataStage)throw new Error("Safe storage transaction is required.");delete appDataStage.data[key];}
+    catch {if(appDataStage)appDataStage.error=new Error("Browser storage could not stage this removal. Existing data is unchanged.");storageUnavailable=true;reportStorage("Could not remove saved data. Allow browser storage and try again.");throw new Error("Browser storage is unavailable.");}
 }
 function readJSON(key,fallback) {
     const value=getLocal(key);if(value===null)return fallback;
@@ -379,7 +418,7 @@ function migrateLegacyUser() {
                 lessonProgress: legacyProgress || {},
                 createdAt: legacyProfile.signedInAt || new Date().toISOString()
             };
-            if (!appDataLockHeld) {
+            if (!appDataStage) {
                 if (!legacyMigrationPending) {
                     legacyMigrationPending = true;
                     Promise.resolve().then(() => withAppDataLock(() => {
@@ -417,14 +456,14 @@ function restoreSession() {
 }
 
 function refreshWorkspaceFromStorage() {
+    const actor=profile?.email||null,unsavedChat=JSON.stringify(chatHistory.slice(-40))!==tutorHistorySnapshot;
     restoreSession();
-    resetWorkspace();
-    updateProfileButton();
-    updateDashboard();
-    renderPortfolio();
-    renderLessons();
-    renderCommunityNotes();
-    updateLessonProgress();
+    if(actor!==(profile?.email||null))resetWorkspace();
+    else{
+        restoreCommunityNotes();
+        if(!unsavedChat){$("chat")?.replaceChildren();restoreTutorHistory();renderMiniTutorMessages();}
+    }
+    updateProfileButton();updateDashboard();renderPortfolio();renderLessons();renderCommunityNotes();updateLessonProgress();
 }
 
 let profile = null;
@@ -940,7 +979,6 @@ function escapeHTML(value) {
 
 
 function saveEverything() {
-    if (activeAppDataContext?.snapshot !== undefined) assertAppDataContext(activeAppDataContext);
     if(portfolioRecovery)throw new Error("Saved portfolio is damaged. Export a backup, then explicitly reset it.");
     const activeEmail=getLocal("novaSession"),users=loadUsers();
     const validSession=activeEmail && Object.hasOwn(users,activeEmail)?activeEmail:null;
@@ -1181,10 +1219,7 @@ function toggleWatchlistNow(symbol) {
 
     try{saveEverything();}catch(error){account=previousAccount;reportStorage(error.message);return;}
 
-    renderWatchlist();
-
-    renderStocks();
-    renderStockDetail();
+    afterDataCommit(()=>{renderWatchlist();renderStocks();renderStockDetail();});
 
 }
 
@@ -2087,7 +2122,7 @@ function placePaperOrder(symbol,side,shares) {
     const submit=$("paperOrderForm")?.querySelector('button[type="submit"]');
     if(submit){submit.disabled=true;submit.textContent="Reviewing order…";}
     $("orderStatus").textContent=`Waiting to safely review ${side} ${shares} ${symbol}…`;
-    return withAppDataLock(() => placePaperOrderNow(symbol,side,shares), { onError: error => {
+    return withAppDataLock(() => placePaperOrderNow(symbol,side,shares), { onSettled:finishPaperOrder,onError: error => {
         $("orderStatus").textContent=`Order not placed: ${error.message || "Could not safely save this order."}`;
         finishPaperOrder();
     } });
@@ -2123,15 +2158,15 @@ function placePaperOrderNow(symbol,side,shares) {
             throw new Error("Order not placed: browser storage could not save it.");
         }
 
+        afterDataCommit(()=>{
         renderPortfolio();
         updateDashboard();
         renderTradeHistory();
         renderStockDetail();
         status.textContent = `${side} completed: ${shares} ${symbol} · ${new Date().toLocaleString()} · simulated.`;
+        });
     } catch (error) {
         status.textContent = error.message;
-    } finally {
-        finishPaperOrder();
     }
 
 }
@@ -2167,11 +2202,13 @@ function resetPaperAccountNow() {
         return;
     }
 
+    afterDataCommit(()=>{
     $("orderStatus").textContent="Paper account reset.";
     if(!storageUnavailable && !usersRecovery)$("storageStatus").hidden=true;
     renderPortfolio();
     updateDashboard();
     $("orderStatus").textContent = "Paper account reset. Lessons were retained.";
+    });
 
 }
 
@@ -2540,10 +2577,7 @@ function submitQuiz() {
         currentQuizSubmission=null;
         if(button){button.disabled=false;button.textContent="Submit Quiz";}
     };
-    return withAppDataLock(() => {
-        try{return submitQuizNow(lesson,answers,view);}
-        finally{finish();}
-    }, {onError:error=>{view.error(error);finish();}});
+    return withAppDataLock(()=>submitQuizNow(lesson,answers,view),{onSettled:finish,onError:view.error});
 }
 
 function submitQuizNow(lesson, answers, view) {
@@ -2616,6 +2650,7 @@ function submitQuizNow(lesson, answers, view) {
 
     try{saveEverything();}catch(error){lessonProgress=previousProgress;view.error(error);return;}
 
+    afterDataCommit(()=>{
     updateLessonProgress();
 
     renderLessons();
@@ -2657,6 +2692,7 @@ function submitQuizNow(lesson, answers, view) {
             </div>
         `;
 
+    });
 }
 
 
@@ -2769,9 +2805,9 @@ async function sendAI(optionalMessage=null) {
     const cancelButton=$("aiCancel");if(cancelButton)cancelButton.hidden=false;
     let loading=null;
     try{
-        addChatMessage("user",message);chatHistory.push({role:"user",content:message});chatHistory=chatHistory.slice(-40);await persistTutorHistory();
+        addChatMessage("user",message);chatHistory.push({role:"user",content:message});chatHistory=chatHistory.slice(-40);const userSaved=await persistTutorHistory();
         if(!isCurrent())return;
-        if(fromMainDraft && input.value===submittedDraft)input.value="";
+        if(userSaved!==false && fromMainDraft && input.value===submittedDraft)input.value="";
         const useGuide=shouldUseVerifiedGuide(message);
         const needsSearch=isCurrentInfoRequest(message);
         loading=addChatMessage("assistant",needsSearch?"Searching financial headlines...":localEngine && !useGuide?"Generating on your device...":"Checking the study guide...");
@@ -2786,7 +2822,7 @@ async function sendAI(optionalMessage=null) {
         if(!isCurrent())return;
         if(needsSearch && !web.articles.length)answer=`No current news sources could be retrieved. This answer is general education, not a report of current events.\n\n${answer}`;
         loading.remove();loading=null;addChatMessage("assistant",answer,web.articles,mode);
-        chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-40);await persistTutorHistory();
+        chatHistory.push({role:"assistant",content:answer});chatHistory=chatHistory.slice(-40);await persistTutorHistory();return userSaved!==false;
     }catch(error){
         if(isCurrent())$("tutorStatus").textContent=`Tutor could not finish: ${String(error.message || error).slice(0,140)}. You can try again.`;
     }finally{if(loading)loading.remove();tutorIsGenerating=false;activeTutorAbortController=null;$("aiSend").disabled=false;if(cancelButton)cancelButton.hidden=true;}
@@ -3569,6 +3605,7 @@ function updateProfileButton() {
 
 
 function openAuth() {
+    authPresentation++;
 
     closeProfileMenu();
     setAuthMode(authMode || "signin");
@@ -3584,6 +3621,7 @@ function openAuth() {
 
 
 function closeAuth() {
+    authPresentation++;
 
     hideDialog("authModal");
     $("profilePassword").value = "";
@@ -3723,15 +3761,17 @@ async function hashPassword(password, email, storedHash = null) {
 function applyUser(user) {
     const fresh=loadUsers()[user.email];
     if(!fresh)throw new Error("Demo profile was removed in another tab. Try again.");
-    setLocal("novaSession",fresh.email);portfolioRecovery=false;
+    setLocal("novaSession",fresh.email);afterDataCommit(()=>{portfolioRecovery=false;
     profile={name:fresh.name,email:fresh.email,signedInAt:fresh.createdAt};
     account=restoreAccount(fresh.account);lessonProgress=restoreProgress(fresh.lessonProgress);savedSnapshot=persistedSignature();
-    resetWorkspace();updateProfileButton();updateDashboard();renderPortfolio();renderLessons();updateLessonProgress();
+    resetWorkspace();updateProfileButton();updateDashboard();renderPortfolio();renderLessons();updateLessonProgress();});
 }
 
 async function submitAuthCore(fields) {
 
     const mode = fields.mode;
+    const authError=message=>{if(fields.presentation===authPresentation)showAuthError(message);else reportStorage(`An earlier profile request could not finish: ${message}`);};
+    const finishAuth=()=>afterDataCommit(()=>{if(fields.presentation===authPresentation)closeAuth();});
     if(mode === "signup" && portfolioRecovery)throw new Error("Repair the damaged portfolio before copying it into a profile.");
     const name = fields.name.trim();
     const email = fields.email.trim().toLowerCase();
@@ -3739,22 +3779,22 @@ async function submitAuthCore(fields) {
     const confirm = fields.confirm;
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-        showAuthError("Enter a valid email address.");
+        authError("Enter a valid email address.");
         return;
     }
 
     if (!password || password.length < 6) {
-        showAuthError("Password must be at least 6 characters.");
+        authError("Password must be at least 6 characters.");
         return;
     }
 
     if (mode === "signup" && !name) {
-        showAuthError("Enter your name.");
+        authError("Enter your name.");
         return;
     }
 
     if (mode === "signup" && password !== confirm) {
-        showAuthError("Passwords do not match.");
+        authError("Passwords do not match.");
         return;
     }
 
@@ -3768,7 +3808,7 @@ async function submitAuthCore(fields) {
 
     if (mode === "signup") {
         if (users[email] && users[email].passwordHash) {
-            showAuthError("That email already has an account. Sign in instead.");
+            authError("That email already has an account. Sign in instead.");
             return;
         }
 
@@ -3783,9 +3823,7 @@ async function submitAuthCore(fields) {
 
         saveUsers(users);
         applyUser(users[email]);
-        closeAuth();
-        $("profilePassword").value = "";
-        $("profilePassword2").value = "";
+        finishAuth();
         return;
 
     }
@@ -3793,7 +3831,7 @@ async function submitAuthCore(fields) {
     const user = users[email];
 
     if (!user) {
-        showAuthError("No account found for that email. Create one first.");
+        authError("No account found for that email. Create one first.");
         return;
     }
 
@@ -3802,12 +3840,12 @@ async function submitAuthCore(fields) {
         user.name = (user.name || name || "Student").slice(0, 80);
         saveUsers(users);
         applyUser(user);
-        closeAuth();
+        finishAuth();
         return;
     }
 
     if (user.passwordHash !== hash) {
-        showAuthError("Incorrect password.");
+        authError("Incorrect password.");
         return;
     }
 
@@ -3820,8 +3858,7 @@ async function submitAuthCore(fields) {
     }
 
     applyUser(user);
-    closeAuth();
-    $("profilePassword").value = "";
+    finishAuth();
 
 }
 
@@ -3830,7 +3867,7 @@ async function submitAuth() {
 
     if (authPending) return;
     const fields = {
-        mode: authMode, name: $("profileName").value, email: $("profileEmail").value,
+        presentation:authPresentation,mode: authMode, name: $("profileName").value, email: $("profileEmail").value,
         password: $("profilePassword").value, confirm: $("profilePassword2").value
     };
 
@@ -3840,9 +3877,10 @@ async function submitAuth() {
     if (button) {button.disabled = true;button.textContent = authMode === "signup" ? "Creating profile…" : "Signing in…";button.setAttribute("aria-busy", "true");}
 
     try {
-        await withAppDataLock(() => submitAuthCore(fields), { onError: error => showAuthError(error.message) });
+        await withAppDataLock(() => submitAuthCore(fields), { onError:error=>{if(fields.presentation===authPresentation)showAuthError(error.message);else reportStorage(`An earlier profile request was not saved: ${error.message}`);} });
     } catch (error) {
-        showAuthError(error.message || "Could not save this profile. Check browser storage settings.");
+        if(fields.presentation===authPresentation)showAuthError(error.message || "Could not save this profile. Check browser storage settings.");
+        else reportStorage("An earlier profile request was not saved. Existing data is unchanged.");
     } finally {
         authPending = false;
         if (button) {button.disabled = false;button.textContent = submitLabel;button.setAttribute("aria-busy", "false");}
@@ -3862,12 +3900,12 @@ function signOut() {
 
 function signOutNow() {
     try{removeLocal("novaSession");}catch(error){reportStorage(`Sign out failed: ${error.message || "browser storage is unavailable"}. Your profile is still active.`);return;}
-    profile=null;portfolioRecovery=false;const guest=guestState();account=restoreAccount(guest.account);lessonProgress=restoreProgress(guest.lessonProgress);
-    savedSnapshot=persistedSignature();resetWorkspace();updateProfileButton();updateDashboard();renderPortfolio();renderLessons();updateLessonProgress();closeProfileMenu();showPage("home");
+    afterDataCommit(()=>{profile=null;portfolioRecovery=false;const guest=guestState();account=restoreAccount(guest.account);lessonProgress=restoreProgress(guest.lessonProgress);
+    savedSnapshot=persistedSignature();resetWorkspace();updateProfileButton();updateDashboard();renderPortfolio();renderLessons();updateLessonProgress();closeProfileMenu();showPage("home");});
 }
 
 function persistTutorHistory() {
-    if(!$("rememberTutorChat")?.checked)return Promise.resolve(false);
+    if(!$("rememberTutorChat")?.checked)return Promise.resolve(true);
     const key=workspaceKey("turboTutorHistory"), raw=JSON.stringify(chatHistory.slice(-40));
     return withAppDataLock(() => {
         setLocal(key,raw);
@@ -4063,15 +4101,16 @@ async function submitMiniTutor(event) {
         return;
     }
 
-    input.value = "";
+    const submittedDraft=input.value;
     button.disabled = true;
     $("miniTutorStatus").textContent = localEngine
         ? "Generating with the on-device model..."
         : "Checking the verified study guide...";
 
     try {
-        await sendAI(message);
+        const sent=await sendAI(message);
         if(epoch!==generationEpoch)return;
+        if(sent!==false && input.value===submittedDraft)input.value="";
         renderMiniTutorMessages();
         $("miniTutorStatus").textContent = localEngine && !usesVerifiedNotes
             ? "Generated on this device. Verify financial facts; it can make mistakes."
@@ -4202,9 +4241,11 @@ function saveCommunityNoteNow(draft) {
     communityNotes = communityNotes.slice(0, 80);
     try{setLocal(workspaceKey("turboCommunityNotes"),JSON.stringify(communityNotes));}
     catch{communityNotes=previousNotes;return;}
+    afterDataCommit(()=>{
     if($("communityClaimSymbol").value.trim().toUpperCase()===draft.symbol && $("communityClaim").value.trim()===draft.claim &&
         $("communitySource").value===draft.source && $("communityTone").value===draft.tone) $("communityNoteForm").reset();
     renderCommunityNotes();
+    });
 
 }
 
@@ -4268,7 +4309,7 @@ function deleteCommunityNoteNow(id) {
     communityNotes=communityNotes.filter(note=>note.id!==id);
     try{setLocal(workspaceKey("turboCommunityNotes"),JSON.stringify(communityNotes));}
     catch{communityNotes=previousNotes;return;}
-    renderCommunityNotes();
+    afterDataCommit(renderCommunityNotes);
 
 }
 
@@ -4362,8 +4403,7 @@ function toggleTheme() {
    INITIALIZATION
 ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
+onDocumentReady(
     () => {
 
         let savedTheme = null;
@@ -4381,6 +4421,7 @@ document.addEventListener(
             $("storageStatus").hidden = !(storageUnavailable || portfolioRecovery || usersRecovery);
         }
         if (!navigator.locks?.request) reportStorage(SAFE_SAVE_UNAVAILABLE);
+        if(window.workspaceAuthority?.warning||!window.workspaceAuthority?.available)reportStorage(window.workspaceAuthority?.warning||"Authoritative storage is unavailable. Available data is readable and exportable; allow site storage and reload to edit.");
 
 
         const nav = $("mainNav");
@@ -4635,3 +4676,8 @@ window.signOut =
 window.toggleTheme =
     toggleTheme;
 
+
+window.workspaceAuthority?.subscribe(syncAuthoritativeWorkspace);
+
+window.addEventListener("focus",syncAuthoritativeWorkspace);
+if(window.workspaceAuthority?.available)syncAuthoritativeWorkspace();

@@ -112,14 +112,14 @@ test('guest order saves atomically and failed write rolls back memory',()=>{
 });
 test('stale tab cannot overwrite portfolio changes or switch the active profile',async()=>{
     const store=new Map();const first=harness(store);const second=harness(store);
-    first.run('account=PaperEngine.execute(account,"AAPL","BUY",1,255);saveEverything()');
+    await first.run('withAppDataLock(()=>{account=PaperEngine.execute(account,"AAPL","BUY",1,255);saveEverything();})');
     assert.throws(()=>second.run('saveEverything()'),/another tab/);
     await signup(first);assert.throws(()=>second.run('saveEverything()'),/another tab/);
     const saved=store.get('novaUsers');second.run('saveBeforeTabCloses()');assert.equal(store.get('novaUsers'),saved);
 });
 test('switching profiles clears old chat and uses separate tutor/note keys',async()=>{
     const h=harness(new Map(),{boot:true});await signup(h,'first@example.com');h.element('rememberTutorChat').checked=true;h.run('setTutorHistoryPreference()');await h.run('sendAI("Explain dividends")');
-    h.run('communityNotes=[{id:"note-1",symbol:"AAPL",source:"Other",tone:"unverified",claim:"first profile",createdAt:new Date().toISOString()}];setLocal(workspaceKey("turboCommunityNotes"),JSON.stringify(communityNotes))');
+    await h.run('withAppDataLock(()=>{communityNotes=[{id:"note-1",symbol:"AAPL",source:"Other",tone:"unverified",claim:"first profile",createdAt:new Date().toISOString()}];setLocal(workspaceKey("turboCommunityNotes"),JSON.stringify(communityNotes));})');
     await signup(h,'second@example.com');assert.equal(h.run('chatHistory.length'),0);assert.equal(h.run('communityNotes.length'),0);assert.equal(h.run('account.history.length'),0);
     assert.ok(h.store.has('turboTutorHistory:first%40example.com'));assert.equal(h.store.has('turboTutorHistory:second%40example.com'),false);
 });
@@ -148,12 +148,14 @@ test('page navigation and all inline handlers refer to defined functions',()=>{
     for(const page of ['home','markets','trending','portfolio','learn','news','other','community','copyright','ai']){h.run(`showPage("${page}")`);assert.equal(h.context.location.hash,`#${page}`);assert.equal(h.element(`${page}-page`).classList.contains('active'),true);}
     h.run('showPage("unknown")');assert.equal(h.context.location.hash,'#home');
 });
-test('signup preserves unrelated profiles created while hashing and locks auth mode',async()=>{
+test('signup rejects a concurrent authoritative change without losing unrelated profiles and allows retry',async()=>{
     const h=harness();h.element('profileName').value='Student';h.element('profileEmail').value='student@example.com';h.element('profilePassword').value='unique-demo-pass';h.element('profilePassword2').value='unique-demo-pass';
-    h.run('authMode="signup";hashPassword=()=>new Promise(resolve=>{authRelease=resolve});');const pending=h.run('submitAuth()');
+    h.run('authMode="signup";originalHash=hashPassword;hashPassword=()=>new Promise(resolve=>{authRelease=resolve});');const pending=h.run('submitAuth()');
     h.run('setAuthMode("signin")');assert.equal(h.run('authMode'),'signup');
     const other={name:'Other',email:'other@example.com',passwordHash:'demo-other-hash',account:{cash:100000,positions:{},history:[],watchlist:[]},lessonProgress:{}};
-    h.store.set('novaUsers',JSON.stringify({'other@example.com':other}));h.run('authRelease("demo-test-hash")');await pending;
+    const outside=harness(h.store);outside.authority.commit(outside.authority.load().revision,{novaUsers:JSON.stringify({'other@example.com':other})});h.run('authRelease("demo-test-hash")');await pending;
+    assert.match(h.element('authError').textContent,/changed before commit/);assert.ok(JSON.parse(h.store.get('novaUsers'))['other@example.com']);
+    h.run('hashPassword=originalHash');await h.run('submitAuth()');
     const users=JSON.parse(h.store.get('novaUsers'));assert.ok(users['other@example.com']);assert.ok(users['student@example.com']);
 });
 test('malformed profile records cannot be silently discarded by subsequent writes',()=>{
@@ -199,7 +201,7 @@ test('backup import reports failed writes and verifies restoration of the previo
     h.element('backupImportFile').files=[{size:50,text:async()=>JSON.stringify(payload)}];
     const originalSet=h.storage.setItem;let failed=false;h.storage.setItem=(key,value)=>{if(key==='novaTheme'&&!failed){failed=true;throw new Error('Quota exceeded');}return originalSet(key,value);};
     await h.run('importLocalBackup(document.getElementById("backupImportFile"))');
-    assert.equal(store.get('novaTheme'),'dark');assert.match(h.element('backupStatus').textContent,/restored and verified/);
+    assert.equal(store.get('novaTheme'),'dark');assert.match(h.element('backupStatus').textContent,/unchanged/);
 });
 
 test('backup import rejects unknown prefixed keys, unsafe properties and bad cross references',()=>{
@@ -227,9 +229,9 @@ test('other tabs cannot save while an import lock is active',()=>{
 });
 
 test('watchlist detail and full-position close update saved simulated records',()=>{
-    const h=harness(new Map(),{boot:true});h.run('account.watchlist=[];saveEverything();toggleWatchlist("AAPL")');assert.ok(JSON.parse(h.store.get('turboGuestStateV2')).account.watchlist.includes('AAPL'));
+    const h=harness(new Map(),{boot:true});h.run('withAppDataLock(()=>{account.watchlist=[];saveEverything();});toggleWatchlist("AAPL")');assert.ok(JSON.parse(h.store.get('turboGuestStateV2')).account.watchlist.includes('AAPL'));
     h.run('openStock("AAPL")');assert.match(h.element('stockDetail').innerHTML,/Apple/);
-    h.run('account=PaperEngine.execute(account,"AAPL","BUY",2,stocks.AAPL.price);saveEverything();renderPortfolio();closePosition("AAPL")');
+    h.run('withAppDataLock(()=>{account=PaperEngine.execute(account,"AAPL","BUY",2,stocks.AAPL.price);saveEverything();});renderPortfolio();closePosition("AAPL")');
     const saved=JSON.parse(h.store.get('turboGuestStateV2')).account;assert.equal(saved.positions.AAPL,undefined);assert.equal(saved.history[0].side,'SELL');assert.equal(saved.history[0].shares,2);
 });
 
@@ -278,7 +280,7 @@ test('device preview controls are only placed in the Other page',()=>{
 
 test('watchlist can sort without changing its saved symbol order',()=>{
     const h=harness(new Map(),{boot:true});
-    h.run('account.watchlist=["TSLA","AAPL","NVDA"];saveEverything()');
+    h.run('withAppDataLock(()=>{account.watchlist=["TSLA","AAPL","NVDA"];saveEverything();})');
     h.element('watchlistSort').value='symbol';h.run('renderWatchlist()');
     const markup=h.element('homeWatchlist').innerHTML;
     assert.ok(markup.indexOf('AAPL')<markup.indexOf('NVDA')&&markup.indexOf('NVDA')<markup.indexOf('TSLA'));

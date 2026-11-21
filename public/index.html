@@ -19,7 +19,7 @@
     <script id="thirdPartyCharts" async src="https://s3.tradingview.com/tv.js"></script>
 </head>
 
-<body>
+<body inert>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <p id="connectionStatus" class="connection-status" role="status" hidden>Offline — cached lessons and fixed sample trading only. News and provider quotes need internet.</p>
 
@@ -1595,9 +1595,8 @@
     <button id="miniTutorLauncher" class="mini-tutor-launcher" type="button" aria-expanded="false" aria-controls="miniTutorPanel" onclick="toggleMiniTutor()">Ask AI</button>
 </div>
 
-<script src="/paper-engine.js"></script>
-<script src="/app.js"></script>
-<script src="/ui.js"></script>
+<script src="/workspace-store.js"></script>
+<script src="/bootstrap.js"></script>
 
 </body>
 </html>
