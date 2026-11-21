@@ -1,5 +1,10 @@
 # Turbo Stocks changes and verification
 
+## Refresh clean views when any authoritative revision is adopted — November 21, 2026
+
+- After captured actor/context validation, an adopted revision change now refreshes clean workspace views even when the account signature is unchanged. Theme/export can no longer consume a notes/chat/preference-only revision while leaving those clean views stale. Nonempty unsaved conversations and main/quick drafts remain intact; stale account actions still reject before reconciliation.
+- Added the failed-before/passed-after notes/chat-only revision regression for theme and export. Syntax checks and all **118 tests** passed; the transaction protocol and data format remain unchanged.
+
 ## Refresh imported conversations in a clean workspace — November 21, 2026
 
 - An empty conversation is now treated as clean when reconciling imported saved history. A same-profile backup with remembered messages updates its checkbox, messages, and snapshot immediately; nonempty unsaved conversations and unsent main/quick drafts remain protected.

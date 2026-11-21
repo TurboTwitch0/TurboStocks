@@ -230,3 +230,20 @@ test('same-guest import restores remembered history into an empty clean conversa
     assert.equal(h.run('JSON.stringify(chatHistory)'),JSON.stringify(history));assert.equal(h.run('tutorHistorySnapshot'),JSON.stringify(history));
     assert.equal(h.element('aiInput').value,'Keep main draft');assert.equal(h.element('miniTutorInput').value,'Keep quick draft');
 });
+
+test('theme and export refresh clean notes and chat after a revision that leaves the account unchanged',async()=>{
+    for(const action of ['toggleTheme()','exportLocalBackup()']) {
+        const store=new Map([['turboRememberTutor:guest','true'],['turboTutorHistory:guest','[]']]);
+        const first=harness(store,{boot:true}),second=harness(store,{boot:true}),accountSignature=second.run('persistedSignature()');
+        first.element('communityClaimSymbol').value='AAPL';first.element('communityClaim').value='A newer saved observation';
+        first.element('communitySource').value='Other';first.element('communityTone').value='unverified';
+        await first.run('saveCommunityNote({preventDefault(){}})');await first.run('sendAI("Explain dividends")');
+        assert.equal(first.run('persistedSignature()'),accountSignature);assert.equal(second.run('communityNotes.length'),0);assert.equal(second.run('chatHistory.length'),0);
+        second.element('aiInput').value='Keep main draft';second.element('miniTutorInput').value='Keep quick draft';
+        second.run('downloadJSON=payload=>{exportedBackup=payload;}');await second.run(action);await second.run('syncAuthoritativeWorkspace()');
+        assert.equal(second.run('communityNotes[0]?.claim'),'A newer saved observation',`${action} adopted notes revision without refreshing notes`);
+        assert.equal(second.run('chatHistory[0]?.content'),'Explain dividends');assert.match(second.run('chatHistory.at(-1)?.content')||'',/Dividends/);
+        assert.equal(second.run('tutorHistorySnapshot'),store.get('turboTutorHistory:guest'));assert.equal(second.run('persistedSignature()'),accountSignature);
+        assert.equal(second.element('aiInput').value,'Keep main draft');assert.equal(second.element('miniTutorInput').value,'Keep quick draft');
+    }
+});
