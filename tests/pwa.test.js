@@ -27,7 +27,7 @@ test('offline shell requests with query parameters use the current release cache
   assert.equal((await response).offline,true);
  }
  assert.deepEqual(lookups,['/','/app.js','/styles.css']);
- assert.ok(opened.every(name=>name==='turbo-shell-v1.6.1-safe-saves'));
+ assert.ok(opened.every(name=>name==='turbo-shell-v1.6.1-quiz-presentation'));
 });
 test('manifest icons are actual PNG files with declared sizes', () => {
  const manifest=JSON.parse(fs.readFileSync('public/manifest.webmanifest','utf8'));
@@ -40,9 +40,9 @@ test('manifest icons are actual PNG files with declared sizes', () => {
 test('release service worker uses a fresh cache and removes prior Turbo Stocks shell caches', async () => {
  const handlers={},deleted=[];
  const context=vm.createContext({URL,Promise,self:{location:{origin:'https://turbo.test'},addEventListener:(name,handler)=>handlers[name]=handler},
-  caches:{keys:async()=>['turbo-shell-v1.3.1','turbo-shell-v1.3.2','other-app-cache','turbo-shell-v1.3.3','turbo-shell-v1.6.1-search-dialog','turbo-shell-v1.6.1-mobile-data','turbo-shell-v1.6.1-safe-saves'],delete:async key=>deleted.push(key)}});
+  caches:{keys:async()=>['turbo-shell-v1.3.1','turbo-shell-v1.3.2','other-app-cache','turbo-shell-v1.3.3','turbo-shell-v1.6.1-search-dialog','turbo-shell-v1.6.1-mobile-data','turbo-shell-v1.6.1-safe-saves','turbo-shell-v1.6.1-quiz-presentation'],delete:async key=>deleted.push(key)}});
  vm.runInContext(fs.readFileSync('public/sw.js','utf8'),context);
  let pending;handlers.activate({waitUntil:promise=>pending=promise});await pending;
- assert.deepEqual(deleted,['turbo-shell-v1.3.1','turbo-shell-v1.3.2','turbo-shell-v1.3.3','turbo-shell-v1.6.1-search-dialog','turbo-shell-v1.6.1-mobile-data']);
+ assert.deepEqual(deleted,['turbo-shell-v1.3.1','turbo-shell-v1.3.2','turbo-shell-v1.3.3','turbo-shell-v1.6.1-search-dialog','turbo-shell-v1.6.1-mobile-data','turbo-shell-v1.6.1-safe-saves']);
 });
 

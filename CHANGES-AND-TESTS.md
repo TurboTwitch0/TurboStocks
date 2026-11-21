@@ -1,5 +1,10 @@
 # Turbo Stocks changes and verification
 
+## Deliver the quiz shell to installed apps — November 21, 2026
+
+- Rotated the shell cache from `safe-saves` to `quiz-presentation` for the quiz follow-up. Network-first fetching and normal waiting/activation remain unchanged; open tabs are not forcibly reloaded and local data is not reset.
+- Service-worker syntax and all four PWA regressions passed. A Chromium fixture served the actual `fbc6358` worker and app, then updated to the new shell: the worker waited while the old client retained its unsent draft; after that client closed, activation removed the old shell cache and preserved holdings/history, unrelated data, and unrelated caches. Offline reload delivered the new quiz presentation controls with unchanged account data. No runtime errors or external requests occurred.
+
 ## Keep queued quiz feedback with its dialog — November 21, 2026
 
 - Each opened lesson and quiz submission now has a presentation owner. A queued quiz still saves its legitimately submitted progress, but its score/error/cleanup cannot affect a freshly reopened lesson, including the same lesson ID, or release a newer pending submission's controls.
