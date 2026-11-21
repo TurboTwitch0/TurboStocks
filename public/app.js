@@ -459,7 +459,7 @@ function restoreSession() {
 }
 
 function refreshWorkspaceFromStorage() {
-    const actor=profile?.email||null,unsavedChat=JSON.stringify(chatHistory.slice(-40))!==tutorHistorySnapshot;
+    const actor=profile?.email||null,unsavedChat=chatHistory.length>0&&JSON.stringify(chatHistory.slice(-40))!==tutorHistorySnapshot;
     restoreSession();
     if(actor!==(profile?.email||null))resetWorkspace();
     else{

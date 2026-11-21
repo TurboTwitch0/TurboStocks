@@ -1,5 +1,10 @@
 # Turbo Stocks changes and verification
 
+## Refresh imported conversations in a clean workspace — November 21, 2026
+
+- An empty conversation is now treated as clean when reconciling imported saved history. A same-profile backup with remembered messages updates its checkbox, messages, and snapshot immediately; nonempty unsaved conversations and unsent main/quick drafts remain protected.
+- Added the reproduced import-view regression. Syntax checks and all **117 tests** passed; no durable-data, transaction, or deployment behavior changed.
+
 ## Keep displayed accounts aligned with adopted authority — November 21, 2026
 
 - Theme, export, and scoped-note operations now reconcile account/session memory with the authoritative snapshot after captured actor/context validation and before staging. Adopting a newer revision can no longer leave an old portfolio that later equal-revision sync skips. Stale account actions still reject before refresh and do not replay on a new profile.

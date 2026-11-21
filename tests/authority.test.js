@@ -219,3 +219,14 @@ test('theme, export and note actions refresh adopted account state while preserv
         if(action.startsWith('saveCommunityNote'))assert.equal(JSON.parse(store.get('turboCommunityNotes:guest'))[0].claim,'A scoped observation');
     }
 });
+
+test('same-guest import restores remembered history into an empty clean conversation',async()=>{
+    const h=harness(new Map(),{boot:true}),history=[{role:'user',content:'Imported conversation'}];
+    h.element('aiInput').value='Keep main draft';h.element('miniTutorInput').value='Keep quick draft';
+    const data={'turboRememberTutor:guest':'true','turboTutorHistory:guest':JSON.stringify(history)};
+    h.element('backupImportFile').files=[{size:200,text:async()=>JSON.stringify({product:'Turbo Stocks',formatVersion:1,data})}];
+    await h.run('importLocalBackup(document.getElementById("backupImportFile"))');
+    assert.match(h.element('backupStatus').textContent,/Backup imported/);assert.equal(h.element('rememberTutorChat').checked,true);
+    assert.equal(h.run('JSON.stringify(chatHistory)'),JSON.stringify(history));assert.equal(h.run('tutorHistorySnapshot'),JSON.stringify(history));
+    assert.equal(h.element('aiInput').value,'Keep main draft');assert.equal(h.element('miniTutorInput').value,'Keep quick draft');
+});
