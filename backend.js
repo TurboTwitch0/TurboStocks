@@ -13,6 +13,9 @@ function estimateNext30Minutes(closes, timestamps, currentPrice) {
         .slice(-40);
     if (points.length < 15) return null;
     const lastTime = points[points.length - 1].time;
+    // A recent quote timestamp does not make older or incoherent bars current.
+    if (Math.abs(Date.now() / 1000 - lastTime) > 300) return null;
+    if (points.some((point, index) => index > 0 && point.time <= points[index - 1].time)) return null;
     const recent = points.filter(point => lastTime - point.time <= 30 * 60 && lastTime >= point.time);
     if (recent.length < 15 || lastTime - recent[0].time < 14 * 60) return null;
     const latest = recent[recent.length - 1];

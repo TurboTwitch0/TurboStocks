@@ -1845,6 +1845,7 @@ input:focus,select:focus,textarea:focus { border-color:var(--accent); box-shadow
 .button-loading::after { content:""; width:12px; height:12px; display:inline-block; margin-left:8px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:orbit-spin .8s linear infinite; vertical-align:-2px; }
 @keyframes orbit-spin { to { transform:rotate(360deg); } }
 body.light .topbar,body.light .device-toolbar { background:rgba(243,246,250,.96); }
+body.light .mini-tutor-launcher { color:#fff; }
 body.light .feature,body.light .card,body.light .study-card,body.light .stat,body.light .lesson-card { background:var(--panel); }
 body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
 
@@ -1906,6 +1907,7 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
   .search-results { z-index: 140; max-height: min(55dvh, 440px); overflow-y: auto; }
   #mainNav { display: none; }
   .icon-btn,.profile-btn { min-height: 44px; padding: 8px 11px; }
+  .topbar .icon-btn { min-width: 44px; }
   .profile-btn { max-width: 104px; overflow: hidden; text-overflow: ellipsis; }
   .profile-wrap { margin-left: 0; }
   .profile-menu { right: 0; z-index: 150; }
@@ -1947,6 +1949,10 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
   .inline-search,.learning-tools { width: 100%; max-width: none; min-width: 0; }
   .inline-search input,.learning-tools input { width: 100%; min-width: 0; min-height: 44px; }
   .stats-grid,.portfolio-detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .backup-import { display: grid; gap: 8px; margin: 12px 0; max-width: 100%; }
+  .backup-import input { width: 100%; min-width: 0; max-width: 100%; }
+  .device-preview-settings .device-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; }
+  .device-preview-settings .device-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
   .portfolio-overview { grid-template-columns: minmax(0, 1fr); }
   .allocation-layout { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 14px; }
   .allocation-chart { width: 124px; }
@@ -2018,6 +2024,10 @@ body.light .hero-card { background:linear-gradient(145deg,#e8f0fc,#ffffff); }
   .market-layout { grid-template-columns: minmax(0, 1fr); }
   .stock-list-card { max-height: 300px; }
   .widget-grid,.trending-widgets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 360px) {
+  .stats-grid,.portfolio-detail-stats,.home-overview { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,14 @@
 # Turbo Stocks changes and verification
 
+## Current-bar validation and mobile repairs — November 21, 2026
+
+- Started from GitHub main `4f2b74e`. Kept paper-trading prices, storage schemas, holdings, saved lesson IDs, local profiles, and provider-quote display intact.
+- A current quote timestamp no longer permits a 30-minute scenario based on stale intraday bars. Scenarios also require chronological, distinct valid bar times; stale, missing, invalid, and future history is covered by HTTP regressions. Closed-session quotes remain visible with their provider timestamp, while the scenario stays unavailable. Numeric-string timestamps still work after normalization.
+- Repaired reproduced phone overflow in the backup file picker and page-width preview controls. At widths of 360 pixels or less, account metrics use one column so currency values remain readable. The phone theme control now has a 44-pixel width.
+- Added Escape dismissal and focus return for the quick tutor; the close button also returns focus to its launcher without clearing the draft. Corrected the launcher's dark text on a dark blue background in light mode. Rotated the PWA shell cache and verified that activation removes the previous cache while retaining the current one.
+- Verification: `npm run check` passed; `npm test` passed **74 tests, 0 failures**. The stale-bar and quick-tutor regressions were reproduced before their repairs. Rendered Chromium checks exercised confirmed fractional buy/sell orders, cash/holdings/history persistence after reload, quick-tutor Escape/close and draft retention, and light-theme persistence. All 10 sections fit 320, 390, 768, and 1440 pixel viewports without horizontal page overflow; the narrow portfolio retained intact currency values. No browser runtime errors occurred.
+- Browser checks used `LIVE_DATA=false` and blocked external requests. Actual provider feeds, installed-PWA updates, screen readers, model downloads/inference, and OCR were not tested. No dependency was added and no hosting deployment was performed in this pass.
+
 ## Search and dialog improvements — November 16, 2026
 
 - Started from GitHub main `2d0dfb8`, preserving v0's current briefing/retry handling and canonical-path offline cache repair. No dependencies, storage schema, paper-trading arithmetic, lesson IDs, or authentication behavior were changed.

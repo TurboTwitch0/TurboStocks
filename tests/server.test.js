@@ -52,6 +52,51 @@ test('stale quotes do not produce a fresh 30-minute trend scenario',async t=>{
     const base=await serve(t,{fetchImpl:async()=>Response.json({chart:{result:[{meta:{regularMarketPrice:103,chartPreviousClose:100,regularMarketTime:staleTime,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}})});
     const data=await(await fetch(base+'/api/trending-stocks')).json();assert.equal(data.quotes[0].estimate30m,null);assert.equal(data.quotes[0].priceChange,3);
 });
+test('fresh quote metadata does not make stale intraday bars current', async t => {
+    const now = Math.floor(Date.now() / 1000);
+    const timestamp = Array.from({length: 31}, (_, index) => now - 3600 - (30 - index) * 60);
+    const close = timestamp.map((_, index) => 100 + index * .1);
+    const base = await serve(t, {fetchImpl: async () => Response.json({chart: {result: [{
+        meta: {regularMarketPrice: 103, chartPreviousClose: 100, regularMarketTime: now, currency: 'USD'},
+        timestamp, indicators: {quote: [{close}]},
+    }]}})});
+    const data = await (await fetch(base + '/api/trending-stocks')).json();
+    assert.equal(data.quotes[0].price, 103, 'the provider quote is still usable');
+    assert.equal(data.quotes[0].estimate30m, null, 'old bars cannot support a current 30-minute scenario');
+});
+test('intraday scenarios reject duplicate or out-of-order bars', async t => {
+    const now = Math.floor(Date.now() / 1000);
+    for (const duplicate of [false, true]) {
+        const timestamp = Array.from({length: 31}, (_, index) => now - (30 - index) * 60);
+        if (duplicate) timestamp[12] = timestamp[11];
+        else [timestamp[11], timestamp[12]] = [timestamp[12], timestamp[11]];
+        const close = timestamp.map((_, index) => 100 + index * .1);
+        const base = await serve(t, {fetchImpl: async () => Response.json({chart: {result: [{
+            meta: {regularMarketPrice: 103, chartPreviousClose: 100, regularMarketTime: now, currency: 'USD'},
+            timestamp, indicators: {quote: [{close}]},
+        }]}})});
+        const data = await (await fetch(base + '/api/trending-stocks')).json();
+        assert.equal(data.quotes[0].estimate30m, null);
+    }
+});
+test('scenario timestamps normalize numeric strings but reject missing, invalid, or future history', async t => {
+    const now = Math.floor(Date.now() / 1000);
+    for (const variant of ['numeric strings', 'missing latest', 'invalid timestamps', 'future timestamps']) {
+        let timestamp = Array.from({length: 31}, (_, index) => now - (30 - index) * 60);
+        const close = timestamp.map((_, index) => 100 + index * .1);
+        if (variant === 'numeric strings') timestamp = timestamp.map((time, index) => index % 2 ? String(time) : time);
+        if (variant === 'missing latest') timestamp[30] = null;
+        if (variant === 'invalid timestamps') timestamp.fill('invalid');
+        if (variant === 'future timestamps') timestamp = timestamp.map(time => time + 600);
+        const base = await serve(t, {fetchImpl: async () => Response.json({chart: {result: [{
+            meta: {regularMarketPrice: 103, chartPreviousClose: 100, regularMarketTime: now, currency: 'USD'},
+            timestamp, indicators: {quote: [{close}]},
+        }]}})});
+        const data = await (await fetch(base + '/api/trending-stocks')).json();
+        assert.equal(data.quotes[0].price, 103, variant);
+        assert.equal(data.quotes[0].estimate30m !== null, variant === 'numeric strings', variant);
+    }
+});
 test('30-minute trend scenario follows a decline and exposes the estimated percent move',async t=>{
     const now=Math.floor(Date.now()/1000),timestamps=Array.from({length:31},(_,index)=>now-(30-index)*60),closes=Array.from({length:31},(_,index)=>120-index*.01);
     const base=await serve(t,{fetchImpl:async()=>Response.json({chart:{result:[{meta:{regularMarketPrice:119.7,chartPreviousClose:120,regularMarketTime:now,currency:'USD'},timestamp:timestamps,indicators:{quote:[{close:closes}]}}]}})});

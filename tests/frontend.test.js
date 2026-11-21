@@ -331,6 +331,23 @@ test('dialog Escape closes only the active dialog and restores its opener',async
     assert.equal(h.context.document.activeElement,opener);
 });
 
+test('quick tutor closes with Escape and returns focus to its launcher',()=>{
+    const h=harness(new Map(),{boot:true});
+    h.element('mobileMoreMenu').hidden=true;
+    h.run('toggleMiniTutor(true)');
+    assert.equal(h.context.document.activeElement,h.element('miniTutorInput'));
+    const escape=target=>{for(const fn of h.events.get('keydown'))fn({key:'Escape',target,preventDefault(){}});};
+    h.element('globalSearch').focus();escape(h.element('globalSearch'));
+    assert.equal(h.element('miniTutorPanel').hidden,false,'Escape elsewhere does not steal focus into the tutor');
+    h.element('miniTutorInput').closest=()=>h.element('miniTutorPanel');
+    h.element('miniTutorInput').focus();escape(h.element('miniTutorInput'));
+    assert.equal(h.element('miniTutorPanel').hidden,true);
+    assert.equal(h.element('miniTutorLauncher').getAttribute('aria-expanded'),'false');
+    assert.equal(h.context.document.activeElement,h.element('miniTutorLauncher'));
+    h.run('toggleMiniTutor(true);toggleMiniTutor(false)');
+    assert.equal(h.context.document.activeElement,h.element('miniTutorLauncher'));
+});
+
 test('trade history filters by symbol, side and inclusive date range, and clears',()=>{
     const h=harness(new Map(),{boot:true});
     h.run('account.history=[{symbol:"AAPL",side:"BUY",shares:1,price:250,total:250,timestamp:"2026-04-03T18:00:00.000Z"},{symbol:"AAPL",side:"SELL",shares:1,price:255,total:255,timestamp:"2026-04-03T19:00:00.000Z"},{symbol:"NVDA",side:"BUY",shares:1,price:140,total:140,timestamp:"2026-04-02T18:00:00.000Z"}];renderTradeHistory()');
