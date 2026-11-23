@@ -334,6 +334,65 @@ test('dialog Escape closes only the active dialog and restores its opener',async
     assert.equal(h.context.document.activeElement,opener);
 });
 
+test('dialogs follow opening order and an underlying close preserves the newer dialog focus',()=>{
+    const h=harness(new Map(),{boot:true});
+    h.element('profileButton').focus();h.run('openLesson("stocks101");openAuth()');
+    const active=h.context.document.activeElement;
+    assert.equal(h.run('getTopDialog().id'),'authModal');
+    assert.equal(h.element('lessonModal').getAttribute('aria-hidden'),'true');
+    h.run('closeLesson()');
+    assert.equal(h.context.document.activeElement,active);
+    assert.equal(h.run('getTopDialog().id'),'authModal');
+    for(const fn of h.events.get('keydown'))fn({key:'Escape',preventDefault(){}});
+    assert.equal(h.run('getTopDialog()'),null);
+    assert.equal(h.context.document.body.classList.contains('dialog-open'),false);
+});
+
+test('Tab returns escaped focus to the newest dialog and wraps in both directions',()=>{
+    const h=harness(new Map(),{boot:true});
+    h.run('openLesson("stocks101");openAuth()');
+    const modal=h.element('authModal'),first=h.element('profileEmail'),last=h.element('authSubmit');
+    modal.children=[first,last];modal.querySelectorAll=()=>[first,last];
+    const tab=shiftKey=>{let prevented=false;for(const fn of h.events.get('keydown'))fn({key:'Tab',shiftKey,preventDefault(){prevented=true;}});assert.equal(prevented,true);};
+    h.element('main-content').focus();tab(false);assert.equal(h.context.document.activeElement,first);
+    tab(true);assert.equal(h.context.document.activeElement,last);
+    tab(false);assert.equal(h.context.document.activeElement,first);
+});
+
+test('dialog isolation preserves previously inert content and restores background controls',()=>{
+    const h=harness(),main=h.element('main-content'),existing=h.element('storageStatus');
+    existing.inert=true;
+    h.context.document.body.children=[main,existing,h.element('authModal'),h.element('lessonModal')];
+    h.run('openLesson("stocks101")');
+    assert.equal(main.inert,true);assert.equal(h.element('lessonModal').inert,false);
+    h.run('openAuth()');
+    assert.equal(h.element('lessonModal').inert,true);assert.equal(h.element('authModal').inert,false);
+    h.run('closeAuth()');
+    assert.equal(h.element('lessonModal').inert,false);assert.equal(main.inert,true);
+    h.run('closeLesson()');
+    assert.equal(main.inert,false);assert.equal(existing.inert,true);
+});
+
+test('page shortcuts continue keyboard focus at their visible destination',()=>{
+    const h=harness(),opener=h.element('learn-page');
+    opener.focus();opener.getClientRects=()=>[];
+    h.run('showPage("portfolio")');
+    assert.equal(h.context.document.activeElement,h.element('main-content'));
+    h.element('profileButton').focus();h.run('showPage("learn")');
+    assert.equal(h.context.document.activeElement,h.element('profileButton'),'visible navigation controls keep their focus');
+});
+
+test('profile popup announces its state, opens at its first action and closes with Escape',async()=>{
+    const h=harness(new Map(),{boot:true});await signup(h);
+    h.element('profileMenu').hidden=true;h.run('handleProfileClick()');
+    assert.equal(h.element('profileMenu').hidden,false);
+    assert.equal(h.element('profileButton').getAttribute('aria-expanded'),'true');
+    for(const fn of h.events.get('keydown'))fn({key:'Escape',preventDefault(){}});
+    assert.equal(h.element('profileMenu').hidden,true);
+    assert.equal(h.element('profileButton').getAttribute('aria-expanded'),'false');
+    assert.equal(h.context.document.activeElement,h.element('profileButton'));
+});
+
 test('quick tutor closes with Escape and returns focus to its launcher',()=>{
     const h=harness(new Map(),{boot:true});
     h.element('mobileMoreMenu').hidden=true;

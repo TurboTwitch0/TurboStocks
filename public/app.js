@@ -1004,6 +1004,8 @@ function saveEverything() {
 
 function showPage(page) {
 
+    const previousFocus = document.activeElement;
+
     if (!validPages.includes(page)) {
         page = "home";
     }
@@ -1059,6 +1061,11 @@ function showPage(page) {
 
 
     closeProfileMenu();
+    // A shortcut can disappear with its old page or popup. Continue at the destination.
+    if (previousFocus && previousFocus !== document.body &&
+        !previousFocus.getClientRects().length && !getTopDialog()) {
+        $("main-content")?.focus({ preventScroll: true });
+    }
 
 
     requestAnimationFrame(() => {
@@ -1771,32 +1778,64 @@ function loadNewsWidget(force = false) {
 }
 
 
-/* Capture focus before opening so dialogs can restore their actual opener. */
+/* Keep nested dialogs ordered and isolate their controls from the background. */
 const dialogOpeners = new Map();
+const dialogStack = [];
+const dialogInertState = new Map();
+function getTopDialog() {
+    return dialogStack.map(id => $(id)).filter(modal => modal?.classList.contains("open")).at(-1) || null;
+}
+function syncDialogState() {
+    const top = getTopDialog();
+    document.body.classList.toggle("dialog-open", !!top);
+    if (top) {
+        for (const child of document.body.children) {
+            if (!dialogInertState.has(child)) dialogInertState.set(child, !!child.inert);
+            child.inert = child !== top && !child.contains(top);
+        }
+        dialogStack.forEach((id, index) => {
+            const modal = $(id);
+            modal.style.zIndex = String(500 + index);
+            modal.setAttribute("aria-hidden", String(modal !== top));
+        });
+    } else {
+        for (const [child, wasInert] of dialogInertState) child.inert = wasInert;
+        dialogInertState.clear();
+    }
+}
 function showDialog(id) {
     const modal = $(id);
     if (!modal) return;
     const alreadyOpen = modal.classList.contains("open");
-    if (!alreadyOpen) dialogOpeners.set(id, document.activeElement);
+    if (!alreadyOpen) {
+        dialogOpeners.set(id, document.activeElement);
+        dialogStack.push(id);
+    }
     modal.classList.add("open");
     modal.style.display = "flex";
-    modal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("dialog-open");
+    syncDialogState();
     if (!alreadyOpen) modal.querySelector("input:not([hidden]),button")?.focus();
 }
 
 function hideDialog(id) {
     const modal = $(id);
     if (!modal?.classList.contains("open")) return;
+    const wasTop = getTopDialog() === modal;
     modal.classList.remove("open");
     modal.style.display = "none";
     modal.setAttribute("aria-hidden", "true");
-    const otherDialog = document.querySelector(".modal.open");
-    document.body.classList.toggle("dialog-open", !!otherDialog);
+    const index = dialogStack.indexOf(id);
+    if (index !== -1) dialogStack.splice(index, 1);
+    syncDialogState();
+    const otherDialog = getTopDialog();
     const opener = dialogOpeners.get(id);
     dialogOpeners.delete(id);
-    if (opener && opener.isConnected !== false && opener.getClientRects().length) opener.focus();
-    else if (!otherDialog) $("main-content")?.focus({ preventScroll: true });
+    // Closing an underlying presentation must not steal focus from a newer one.
+    if (!wasTop) return;
+    if (opener && opener.isConnected !== false && opener.getClientRects().length &&
+        !opener.closest("[inert]") && (!otherDialog || otherDialog.contains(opener))) opener.focus();
+    else if (otherDialog) otherDialog.querySelector("input:not([hidden]),button")?.focus();
+    else $("main-content")?.focus({ preventScroll: true });
 }
 
 /* Show current provider data separately from the simulator's fixed sample prices. */
@@ -3571,6 +3610,8 @@ function handleProfileClick() {
     if (profile) {
         const menu = $("profileMenu");
         menu.hidden = !menu.hidden;
+        $("profileButton")?.setAttribute("aria-expanded", String(!menu.hidden));
+        if (!menu.hidden) menu.querySelector("button")?.focus();
         return;
     }
 
@@ -3584,6 +3625,7 @@ function closeProfileMenu() {
     if ($("profileMenu")) {
         $("profileMenu").hidden = true;
     }
+    $("profileButton")?.setAttribute("aria-expanded", "false");
 
 }
 
@@ -4446,8 +4488,18 @@ onDocumentReady(
             if (!event.target.closest("#mobileMoreMenu, #mobileMoreButton")) toggleMobileMore(false);
         });
 
+        $("profileButton")?.closest(".profile-wrap")?.addEventListener("focusout", event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) closeProfileMenu();
+        });
+
         document.addEventListener("keydown", event => {
             if (document.querySelector(".modal.open")) return;
+            if (event.key === "Escape" && !$("profileMenu")?.hidden) {
+                event.preventDefault();
+                closeProfileMenu();
+                $("profileButton")?.focus();
+                return;
+            }
             if(event.key === "Escape" && !$("miniTutorPanel")?.hidden && event.target?.closest?.(".mini-tutor")) {
                 event.preventDefault();
                 toggleMiniTutor(false);

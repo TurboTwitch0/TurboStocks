@@ -14,6 +14,7 @@ function harness(store=new Map(),{blocked=false,boot=false}={}) {
             classList:{add:name=>classes.add(name),remove:name=>classes.delete(name),contains:name=>classes.has(name),toggle(name,force){if(force??!classes.has(name))classes.add(name);else classes.delete(name);return classes.has(name);}},
             setAttribute(name,value){el.attributes[name]=String(value);},getAttribute(name){return el.attributes[name]??null;},attributes:{},getClientRects(){return [1];},addEventListener(){},focus(){document.activeElement=el;},select(){},click(){},reset(){},
             appendChild(child){el.children.push(child);child.parentNode=el;return child;},append(...children){children.forEach(child=>el.appendChild(child));},replaceChildren(...children){el.children=[];children.forEach(child=>el.appendChild(child));},remove(){if(el.parentNode)el.parentNode.children=el.parentNode.children.filter(child=>child!==el);},
+            contains(target){return target===el || el.children.some(child=>child.contains(target));},
             querySelector(){return node();},querySelectorAll(){return [];},closest(){return null;}};
         let inner='';
         Object.defineProperty(el,'innerHTML',{get:()=>inner,set(value){inner=value;for(const match of String(value).matchAll(/\bid=["']([^"']+)["']/g)){ids.add(match[1]);if(!nodes.has(match[1]))nodes.set(match[1],node(match[1]));}}});

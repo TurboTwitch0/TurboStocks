@@ -80,7 +80,7 @@
             type="button"
             class="profile-btn"
             onclick="handleProfileClick()"
-            id="profileButton"
+            id="profileButton" aria-expanded="false" aria-controls="profileMenu"
         >
             Sign in
         </button>
@@ -1401,7 +1401,7 @@
 
         <button
             type="button"
-            class="close"
+            class="close" aria-label="Close sign in"
             onclick="closeAuth()"
         >
             ×
@@ -1535,7 +1535,7 @@
     <div class="modal-box lesson-modal">
 
         <button
-            class="close"
+            type="button" class="close" aria-label="Close lesson"
             onclick="closeLesson()"
         >
             ×

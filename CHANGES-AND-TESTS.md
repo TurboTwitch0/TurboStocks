@@ -1,5 +1,12 @@
 # Turbo Stocks changes and verification
 
+## Keep navigation and dialog focus usable — November 23, 2026
+
+- Reproduced page shortcuts losing focus to the document after hiding their old page. They now continue at the visible destination, while visible navigation controls retain focus. Profile popups announce their state, focus the first action, and close with Escape or Tab-away.
+- Reproduced background controls receiving focus while an account dialog was open. Open dialogs now make background controls inert and restore each element's previous inert state on close. Nested dialogs follow opening order rather than DOM order; Escape/Tab target the newest dialog, and a late close of an underlying dialog cannot steal its focus. Account and lesson close buttons have descriptive accessible names.
+- Added five focused regressions. Syntax checks and all **123 tests** passed. Fourteen real Chromium flows passed: page and mobile shortcuts, Tab in both directions, reverse-order nested dialogs, late underlying close, original inert state, profile popup, an actual native IndexedDB paper trade and quiz, remembered built-in tutor, exact reload preservation, format-v1 backup export/import into a fresh browser context, and the updated shell offline. All ten pages at 320/390/1440 CSS pixels had no horizontal overflow or page errors. Only synthetic browser-local data was used; external requests were blocked.
+- Rotated the PWA shell to `dialog-focus`, retaining normal waiting/activation. No account schema, authority transaction, backup format, sample-price calculation, dependency, hosted data, or hosting configuration changed. Public deployment is not verified by these local checks.
+
 ## Refresh clean views when any authoritative revision is adopted — November 21, 2026
 
 - After captured actor/context validation, an adopted revision change now refreshes clean workspace views even when the account signature is unchanged. Theme/export can no longer consume a notes/chat/preference-only revision while leaving those clean views stale. Nonempty unsaved conversations and main/quick drafts remain intact; stale account actions still reject before reconciliation.

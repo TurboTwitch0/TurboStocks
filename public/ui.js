@@ -332,7 +332,7 @@ onDocumentReady(() => {
         if(open){open.setAttribute("aria-expanded","false");open.focus();}
     });
     document.addEventListener("keydown", event => {
-        const modal = [...document.querySelectorAll(".modal.open")].at(-1); if (!modal) return;
+        const modal = getTopDialog(); if (!modal) return;
         if (event.key === "Escape") {
             const close = { authModal: closeAuth, lessonModal: closeLesson, dailyBriefModal: closeDailyBriefing }[modal.id];
             if (close) { event.preventDefault(); close(); }
@@ -341,7 +341,8 @@ onDocumentReady(() => {
         if (event.key === "Tab") {
             const nodes = [...modal.querySelectorAll("button,input,a[href],textarea,select")].filter(el => !el.hidden && !el.disabled && el.getClientRects().length);
             const first = nodes[0], last = nodes.at(-1); if (!first) return;
-            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            if (!modal.contains(document.activeElement)) { event.preventDefault(); (event.shiftKey ? last : first).focus(); }
+            else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
         }
     });
