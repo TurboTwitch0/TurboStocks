@@ -1230,7 +1230,7 @@ function toggleWatchlistNow(symbol) {
 
     try{saveEverything();}catch(error){account=previousAccount;reportStorage(error.message);return;}
 
-    afterDataCommit(()=>{renderWatchlist();renderStocks();renderStockDetail();});
+    afterDataCommit(() => { renderWatchlist(); renderStocks(); });
 
 }
 
@@ -1242,6 +1242,11 @@ function renderWatchlist() {
 
     if (!box) return;
 
+    const focusedControl = document.activeElement;
+    const focusedRow = box.contains(focusedControl) ? focusedControl.closest(".watchlist-item") : null;
+    const previousIndex = focusedRow ? [...box.querySelectorAll(".watchlist-item")].indexOf(focusedRow) : -1;
+    const focusedSymbol = focusedRow?.dataset.symbol;
+    const focusSelector = focusedControl?.classList.contains("watchlist-remove") ? ".watchlist-remove" : ".watchlist-detail";
 
     const sort = $("watchlistSort")?.value || "saved";
     const entries = account.watchlist
@@ -1256,7 +1261,7 @@ function renderWatchlist() {
             .map(({symbol, stock}) => {
 
                 return `
-                    <div class="stock-item watchlist-item">
+                    <div class="stock-item watchlist-item" data-symbol="${symbol}">
                         <a class="watchlist-detail" href="#markets" onclick="event.preventDefault();openStock('${symbol}')" aria-label="View ${symbol} details">
 
                         <div class="stock-item-top">
@@ -1299,6 +1304,12 @@ function renderWatchlist() {
             })
             .join("") : '<p class="small">Your watchlist is empty. Open Markets and select a company to add it.</p>';
 
+    if (focusedSymbol && document.activeElement === document.body) {
+        const rows = [...box.querySelectorAll(".watchlist-item")];
+        const nextRow = rows.find(row => row.dataset.symbol === focusedSymbol)
+            || rows[Math.min(previousIndex, rows.length - 1)];
+        (nextRow?.querySelector(focusSelector) || $("watchlistMarkets"))?.focus();
+    }
 }
 
 
@@ -1422,8 +1433,15 @@ function prepareStockOrder(symbol, side) {
 function renderStockDetail() {
     const stock=stocks[currentSymbol], box=$("stockDetail");
     if(!stock||!box)return;
+    const active = document.activeElement;
+    const action = box.dataset.symbol === currentSymbol && box.contains(active) ? active.dataset.stockAction : null;
+    box.dataset.symbol = currentSymbol;
     const watched=account.watchlist.includes(currentSymbol),position=account.positions[currentSymbol];
-    box.innerHTML=`<h3>${escapeHTML(stock.name)} (${escapeHTML(stock.symbol)})</h3><p>Fixed educational sample price: <strong>${money(stock.price)}</strong> · ${stock.change>=0?"+":""}${stock.change}% · ${escapeHTML(stock.exchange)}</p><p>${position?`Your paper position: ${position.shares} shares · average cost ${money(position.averagePrice)}.`:"You do not hold this stock in your paper portfolio."}</p><div class="stock-detail-actions"><button type="button" onclick="toggleWatchlist('${stock.symbol}')">${watched?"Remove from watchlist":"Add to watchlist"}</button><button type="button" class="primary" onclick="prepareStockOrder('${stock.symbol}','BUY')">Set up paper buy</button>${position?`<button type="button" class="secondary" onclick="prepareStockOrder('${stock.symbol}','SELL')">Set up paper sell</button>`:""}</div><p class="small">Sample price is used only for paper trading. Embedded chart data comes from a separate provider.</p>`;
+    box.innerHTML=`<h3>${escapeHTML(stock.name)} (${escapeHTML(stock.symbol)})</h3><p>Fixed educational sample price: <strong>${money(stock.price)}</strong> · ${stock.change>=0?"+":""}${stock.change}% · ${escapeHTML(stock.exchange)}</p><p>${position?`Your paper position: ${position.shares} shares · average cost ${money(position.averagePrice)}.`:"You do not hold this stock in your paper portfolio."}</p><div class="stock-detail-actions"><button type="button" data-stock-action="watchlist" onclick="toggleWatchlist('${stock.symbol}')">${watched?"Remove from watchlist":"Add to watchlist"}</button><button type="button" data-stock-action="buy" class="primary" onclick="prepareStockOrder('${stock.symbol}','BUY')">Set up paper buy</button>${position?`<button type="button" data-stock-action="sell" class="secondary" onclick="prepareStockOrder('${stock.symbol}','SELL')">Set up paper sell</button>`:""}</div><p class="small">Sample price is used only for paper trading. Embedded chart data comes from a separate provider.</p>`;
+    if (action && document.activeElement === document.body) {
+        const buttons = [...box.querySelectorAll("[data-stock-action]")];
+        (buttons.find(button => button.dataset.stockAction === action) || buttons[0])?.focus({ preventScroll: true });
+    }
 }
 
 
